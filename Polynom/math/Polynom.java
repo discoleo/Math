@@ -22,7 +22,7 @@ public class Polynom extends TreeMap<Monom, Double> {
 
 	public Polynom(final String sRootName) {
 		// folosim Constructorul clasei de baza
-		super(new ComparatorPolynom());
+		super(new ComparatorPolynom(sRootName));
 		this.sRootName = sRootName;
 	}
 	public Polynom() {
@@ -45,6 +45,9 @@ public class Polynom extends TreeMap<Monom, Double> {
 	
 	// ++++++ Copy Constructor ++++++
 	public Polynom(final Polynom p) {
+		this(p, p.sRootName);
+	}
+	public Polynom(final Polynom p, final String sRootName) {
 		this(p.sRootName);
 		for(final Map.Entry<Monom, Double> entry : p.entrySet()) {
 			// assumes Polynom p is well formed
@@ -102,6 +105,7 @@ public class Polynom extends TreeMap<Monom, Double> {
 					dCoeffSign = dCoeff;
 				}
 			} else {
+				// TODO: "-1 * x" as first Term => "-x"
 				dCoeffSign = dCoeff;
 			}
 			final int iCoeffSign = (int) dCoeffSign;
@@ -120,14 +124,27 @@ public class Polynom extends TreeMap<Monom, Double> {
 				} else {
 					sb.append(dCoeffSign);
 				}
-				sb.append(" * " + entry.getKey().toString());
+				// TODO: Space vs NO space
+				sb.append("*" + entry.getKey().toString());
 			}
 		}
 		return sb.toString();
 	}
 	
+	// +++++ COMPARATOR +++++++
+	
 	// clasa poate fi clasa de sine statatoare
 	public static class ComparatorPolynom implements Comparator<Monom> {
+		// TODO: Option: Order Ascending vs Descending;
+
+		// TODO: Option: Comparator based first on dominant variable;
+		protected final boolean isPrimary = true;
+		protected final String sPrimary;
+		
+		public ComparatorPolynom(final String sPrimary) {
+			this.sPrimary = sPrimary;
+		}
+		
 		@Override
 		public int compare(final Monom m1, final Monom m2) {
 			// free Term
@@ -138,6 +155,25 @@ public class Polynom extends TreeMap<Monom, Double> {
 				return 1;
 			} else if(m2.size() == 0) {
 				return -1;
+			}
+			
+			if(isPrimary) {
+				final Integer nPow1 = m1.get(sPrimary);
+				final Integer nPow2 = m2.get(sPrimary);
+				if(nPow1 == null) {
+					if(nPow2 != null) {
+						return -1;
+					}
+				} else {
+					if(nPow2 == null) {
+						return 1;
+					} else {
+						final int nPowDiff = nPow1 - nPow2;
+						if(nPowDiff != 0) {
+							return nPowDiff;
+						}
+					}
+				}
 			}
 
 			final Iterator<Map.Entry<String, Integer>> it1 = m1.entrySet().iterator();

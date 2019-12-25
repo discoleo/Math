@@ -17,6 +17,8 @@ public class Monom extends TreeMap<String, Integer> {
 	// WARNING:
 	// free term & coefficient are NOT stored in Monom!
 	
+	// TODO: Clean "var^0": "x^0" != "k^0"
+	
 	private int iPTotala = 0; // puterea totala
 	
 	public Monom(final String sVar, final Integer iPutere) {

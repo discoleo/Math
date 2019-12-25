@@ -15,9 +15,10 @@ import java.util.TreeMap;
  * */
 public class Polynom extends TreeMap<Monom, Double> {
 	
+	// the name of the base variable, e.g. "x"
 	protected final String sRootName;
 	
-	// ++++ Constructori ++++
+	// ++++ Constructor ++++
 
 	public Polynom(final String sRootName) {
 		// folosim Constructorul clasei de baza
@@ -30,6 +31,7 @@ public class Polynom extends TreeMap<Monom, Double> {
 	}
 	public Polynom(final int b0, final String sRootName) {
 		this(sRootName);
+		// b0 = free term
 		if(b0 != 0) {
 			this.put(new Monom(), (double) b0);
 		}
@@ -44,7 +46,10 @@ public class Polynom extends TreeMap<Monom, Double> {
 	// ++++++ Copy Constructor ++++++
 	public Polynom(final Polynom p) {
 		this(p.sRootName);
-		// TODO
+		for(final Map.Entry<Monom, Double> entry : p.entrySet()) {
+			// assumes Polynom p is well formed
+			this.Add(new Monom(entry.getKey()), entry.getValue());
+		}
 	}
 	
 	// ++++++ Member Functions ++++++
@@ -56,9 +61,9 @@ public class Polynom extends TreeMap<Monom, Double> {
 	public Polynom Add(final int [] iCoeffs) {
 		int nPow = 0;
 		for(final int iCoeff : iCoeffs) {
-			// TODO: check if monom exists
 			if(iCoeff != 0) {
-				this.put(new Monom(sRootName, nPow), (double) iCoeff);
+				final Monom m = new Monom(sRootName, nPow);
+				this.Add(m, iCoeff);
 			}
 			nPow ++;
 		}
@@ -66,6 +71,9 @@ public class Polynom extends TreeMap<Monom, Double> {
 	}
 
 	public void Add(final Monom m, final double dCoeff) {
+		if(dCoeff == 0) {
+			return;
+		}
 		final Double dCoeffPrev = this.get(m);
 		if(dCoeffPrev == null) {
 			this.put(m, dCoeff);

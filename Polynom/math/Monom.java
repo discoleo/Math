@@ -66,7 +66,7 @@ public class Monom extends TreeMap<String, Integer> {
 			// apelam functia de baza cu: super.put()
 			final int iPVarNew = iPVar + iPutere;
 			if(iPVarNew != 0) {
-				return super.put(sVar, iPVar + iPutere);
+				return super.put(sVar, iPVarNew);
 			} else {
 				this.remove(sVar);
 				return 0;

@@ -338,6 +338,23 @@ public class MathTools {
 	}
 	
 	// +++ helper Functions +++
+
+	// helper Function: add a variable to a Polynom
+	public Polynom AddVar(final Polynom p, final String sVarName, final int nPow) {
+		final Polynom polyRez = new Polynom(sVarName);
+		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+			final Monom mAdded = this.AddVar(entryM.getKey(), sVarName, nPow);
+			polyRez.put(mAdded, entryM.getValue());
+		}
+		return polyRez;
+	}
+	// helper Function: add a variable to a Monom
+	public Monom AddVar(final Monom m, final String sVarName, final int nPow) {
+		// Attention: does NOT add "in place"
+		// Original Coeffs needed!
+		final Monom mAdd = new Monom(m);
+		return mAdd.Add(sVarName, nPow);
+	}
 	
 	public int Pow(final int iVal, final int iPow) {
 		int iAcc = 1;

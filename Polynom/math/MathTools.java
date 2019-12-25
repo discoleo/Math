@@ -114,6 +114,26 @@ public class MathTools {
 		return mRez;
 	}
 	
+	public Monom Div(final Monom m1, final String sVarName, final int iPow) {
+		final Monom mRez = new Monom(m1);
+		if(iPow == 0) {
+			return mRez;
+		}
+		final Integer iPow1 = m1.get(sVarName);
+		if(iPow1 == null) {
+			// negative Power
+			mRez.Add(sVarName, -iPow);
+		} else {
+			final int iPowRez = iPow1 - iPow;
+			if(iPowRez == 0) {
+				mRez.remove(sVarName);
+			} else {
+				mRez.Put(sVarName, iPowRez);
+			}
+		}
+		return mRez;
+	}
+	
 	public Polynom Add(final Polynom p, final Monom m, final double dCoeff) {
 		// "in place" addition
 		final Double dCoeffOld = p.get(m);
@@ -334,6 +354,56 @@ public class MathTools {
 			polyRez = this.Add(polyRez, polyTerm);
 		}
 		
+		return polyRez;
+	}
+	
+	// +++ Replace: sum(var^i) with dVal
+	public Polynom ReplaceSeq(final Polynom p, final String sVarName, final int iMaxPow, final double dVal) {
+		Polynom polyRez =  new Polynom(p.sRootName);
+		final Polynom pTemp = new Polynom(p);
+		
+		Iterator<Map.Entry<Monom, Double>> itM = pTemp.entrySet().iterator();
+		
+		while(itM.hasNext()) {
+			final Map.Entry<Monom, Double> entryM = itM.next();
+			final Integer nPow = entryM.getKey().get(sVarName);
+			if(nPow == null) {
+				polyRez = this.Add(polyRez, entryM.getKey(), entryM.getValue());
+				itM.remove();
+				continue;
+			}
+			// TODO: nPow > iMaxPow
+			final Monom mWBase = this.Div(entryM.getKey(), sVarName, nPow);
+			final Monom mW = new Monom(mWBase);
+			boolean isPresent = true;
+			double dMaxCoeff = Double.MAX_VALUE;
+			for(int iPow=1; iPow <= iMaxPow; iPow++) {
+				mW.Add(sVarName, 1);
+				final Double dCoeff = p.get(mW);
+				if(dCoeff == null) {
+					isPresent = false;
+					break;
+				}
+				dMaxCoeff = Math.min(dMaxCoeff, dCoeff);
+			}
+			// ! isPresent
+			if( ! isPresent) {
+				polyRez = this.Add(polyRez, entryM.getKey(), entryM.getValue());
+				itM.remove();
+				continue;
+			}
+			// isPresent
+			polyRez = this.Add(polyRez, new Monom(mWBase), dMaxCoeff * dVal);
+			for(int iPow=1; iPow <= iMaxPow; iPow++) {
+				mWBase.Add(sVarName, 1);
+				final Double dCoeff = p.get(mWBase);
+				if(dCoeff != dMaxCoeff) {
+					polyRez = this.Add(polyRez, new Monom(mWBase), entryM.getValue() - dMaxCoeff);
+				}
+				pTemp.remove(mWBase);
+			}
+			itM = pTemp.entrySet().iterator();
+		}
 		return polyRez;
 	}
 	

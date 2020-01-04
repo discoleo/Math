@@ -22,8 +22,7 @@ public class MathTools {
 	public Polynom Mult(final Polynom p1, final int iM, final int iD) {
 		// multiplicare si diviziune polinom cu o valoare numerica;
 		// de fapt vom procesa doar coeficientii;
-		// puteti salva diferenta tot in p1;
-		// iar in general folositi un polinom nou:
+		// TODO:
 		// final Polynom pM = new Polynom();
 		// TODO: iM == 0
 		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
@@ -32,8 +31,21 @@ public class MathTools {
 		}
 		return p1;
 	}
+	public Polynom MultInPlace(final Polynom p1, final int iM) {
+		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
+			final double dRez = entry.getValue() * iM;
+			p1.put(entry.getKey(), dRez);
+		}
+		return p1;
+	}
 	
 	// +++ Multiply 2 Polynomials
+	public Polynom Mult(final Polynom p1, final Monom m2) {
+		return this.Mult(p1, new Polynom(m2, 1, p1.sRootName));
+	}
+	public Polynom Mult(final Polynom p1, final Monom m2, final double dCoeff) {
+		return this.Mult(p1, new Polynom(m2, dCoeff, p1.sRootName));
+	}
 	public Polynom Mult(final Polynom p1, final Polynom p2) {
 		// multiplicarea celor 2 polinoame
 		final Polynom pM = new Polynom(p1.sRootName);
@@ -176,14 +188,16 @@ public class MathTools {
 		}
 		return pRez;
 	}
-	public Polynom AddInPlace(final Polynom p1, final Polynom p2) {
+	public Polynom AddInPlace(final Polynom p1, final Polynom p2Const) {
+		final Polynom p2Temp = new Polynom(p2Const);
 		// Suma dintre 2 polinoame: in-place
 		final Iterator<Map.Entry<Monom, Double>> itP1 = p1.entrySet().iterator();
 		while(itP1.hasNext()) {
 			final Map.Entry<Monom, Double> entryP1 = itP1.next();
-			final Double dCoeff2 = p2.get(entryP1.getKey());
+			final Double dCoeff2 = p2Temp.get(entryP1.getKey());
 			if(dCoeff2 != null) {
 				final double dCoeffRez = entryP1.getValue() + dCoeff2;
+				p2Temp.remove(entryP1.getKey());
 				if(dCoeffRez != 0) {
 					p1.put(entryP1.getKey(), dCoeffRez);
 				} else {
@@ -192,10 +206,10 @@ public class MathTools {
 			}
 		}
 		// Terms only in p2
-		for(final Map.Entry<Monom, Double> entryP2 : p2.entrySet()) {
-			if( ! p1.containsKey(entryP2.getKey())) {
+		for(final Map.Entry<Monom, Double> entryP2 : p2Temp.entrySet()) {
+			// if( ! p1.containsKey(entryP2.getKey())) {
 				p1.put(entryP2.getKey(), entryP2.getValue());
-			}
+			// }
 		}
 		return p1;
 	}
@@ -329,12 +343,19 @@ public class MathTools {
 
 	// +++ Convolve: Replace 1 variable with a polynomial
 	public Polynom Replace(final Polynom p, final String sVarName, final Polynom pW) {
+		final boolean isSameVar = p.sRootName.equals(sVarName);
+		final String sRootName = isSameVar ? pW.sRootName : p.sRootName;
+		final Polynom polyRez = new Polynom(sRootName);
+		return this.Replace(polyRez, p, sVarName, pW);
+	}
+	public Polynom Replace(Polynom polyRez, final Polynom p, final String sVarName, final Polynom pW) {
+		// TODO: "transfer" results to original polyRez
 		final Vector<Polynom> vPolyPow = new Vector<> (); // powers
 		vPolyPow.add(pW); // Powers of pW
 
-		final boolean isSameVar = p.sRootName.equals(sVarName);
-		final String sRootName = isSameVar ? pW.sRootName : p.sRootName;
-		Polynom polyRez =  new Polynom(sRootName);
+		// final boolean isSameVar = p.sRootName.equals(sVarName);
+		final String sRootName = polyRez.sRootName;
+		// Polynom polyRez =  new Polynom(sRootName);
 		
 		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
 			final Integer nPow = entryM.getKey().get(sVarName);

@@ -61,7 +61,7 @@ public class Parser {
 					factoryPoly.SetCoefficient(ch);
 				} else if(ch == '(') {
 					// stare = STATE.PARENTH_START;
-					this.SubExpr(factoryPoly, sVar, it);
+					this.SubExpr(factoryPoly, stare, sVar, it);
 					stare = STATE.VAR_END;
 				} else if(ch == '*' || ch == '=' || ch == '^') {
 					it.Error(stare);
@@ -93,13 +93,12 @@ public class Parser {
 					factoryPoly.SetCoefficient(ch);
 				} else if(ch == '(') {
 					// stare = STATE.PARENTH_START;
-					// TODO: sign "-"
-					this.SubExpr(factoryPoly, sVar, it);
+					this.SubExpr(factoryPoly, stare, sVar, it);
 					stare = STATE.VAR_END;
-				} else if(ch == '*' || ch == '=' || ch == '^') {
+				} else if(ch == '*' || ch == '=' || ch == '^' || ch == ')') {
 					it.Error(stare);
 					stare = STATE.ERR;
-				} // else if(...) { etc. }
+				}
 				break;
 			}
 			case VAR_NUM :
@@ -138,7 +137,10 @@ public class Parser {
 				} else if(ch == '=') {
 					stare = this.ParseEq(factoryPoly, it, stare);
 				} else if(ch == ')') {
-					stare = STATE.PARENTH_END;
+					stare = STATE.PARENTH_END; // may be incorrect with new SubExprParser
+				} else if(ch == '(') {
+					this.SubExpr(factoryPoly, stare, sVar, it);
+					stare = STATE.VAR_END;
 				} // else if(...) { etc. }
 				break;
 			}
@@ -193,6 +195,9 @@ public class Parser {
 					stare = this.ParseEq(factoryPoly, it, stare);
 				} else if(ch == ')') {
 					stare = STATE.PARENTH_END;
+				} else if(ch == '(') {
+					this.SubExpr(factoryPoly, stare, sVar, it);
+					stare = STATE.VAR_END;
 				} else {
 					it.Error(stare);
 					stare = STATE.ERR;
@@ -217,7 +222,7 @@ public class Parser {
 					stare = this.ParseEq(factoryPoly, it, stare);
 				} else if(ch == '(') {
 					// stare = STARE.PARENTH_START;
-					this.SubExpr(factoryPoly, sVar, it);
+					this.SubExpr(factoryPoly, stare, sVar, it);
 					stare = STATE.VAR_END;
 				} else if(ch == ')') {
 					stare = STATE.PARENTH_END;
@@ -238,7 +243,7 @@ public class Parser {
 				} else if(ch == '(') {
 					// stare = STARE.PARENTH_START;
 					// TODO: MULT
-					this.SubExpr(factoryPoly, sVar, it);
+					this.SubExpr(factoryPoly, stare, sVar, it);
 					stare = STATE.VAR_END;
 				} else if(ch == '*' || ch == '=' || ch == '^') {
 					it.Error(stare);
@@ -271,7 +276,7 @@ public class Parser {
 				} else if(ch == '(') {
 					// stare = STARE.PARENTH_START;
 					// TODO: mult
-					this.SubExpr(factoryPoly, sVar, it);
+					this.SubExpr(factoryPoly, stare, sVar, it);
 					stare = STATE.VAR_END;
 				} else if(ch == ')') {
 					stare = STATE.PARENTH_END;
@@ -286,6 +291,7 @@ public class Parser {
 					it.Error(stare);
 					stare = STATE.ERR;
 				}
+				break;
 			}
 			case NUM_FLOAT : {
 				if(ch >= '0' && ch <= '9') {
@@ -311,7 +317,7 @@ public class Parser {
 				} else if(ch == '(') {
 					// stare = STARE.PARENTH_START;
 					// TODO: MULT
-					this.SubExpr(factoryPoly, sVar, it);
+					this.SubExpr(factoryPoly, stare, sVar, it);
 					stare = STATE.VAR_END;
 				} else if(ch == ')') {
 					stare = STATE.PARENTH_END;
@@ -331,10 +337,41 @@ public class Parser {
 		return factoryPoly.GetPolynom();
 	}
 	
-	protected void SubExpr(final PolyGenerator factoryPoly, final String sVar, final SIterator it) {
+	protected void Error(final String sError, final int npos) {
+		System.out.println(sError + npos + ";");
+	}
+	
+	protected void SubExpr(final PolyGenerator factoryPoly, final STATE state, final String sVar, final SIterator it) {
 		it.Inc();
-		final Polynom pRezSubExpr = this.Parse(sVar, it, STATE.PARENTH_END);
-		factoryPoly.Add(pRezSubExpr);
+		final int iEndBracket = this.BracketClose(it);
+		if(iEndBracket < 0) {
+			it.Advance(it.nposEnd);
+			return; // ERROR
+		}
+		final SIterator itSubExpr = new SIterator(it, iEndBracket);
+		final Polynom pRezSubExpr = new Parser().Parse(sVar, itSubExpr, STATE.END);
+		// TODO: handle Errors
+		it.Advance(iEndBracket + 1);
+		
+		switch (state) {
+		case EQ:
+		case START :
+		case SEMN_NEG :
+		case SEMN_POZ : {
+			factoryPoly.Add(pRezSubExpr);
+			break;
+		}
+		case VAR_END :
+		case MULT :
+		case NUM :
+		case NUM_FLOAT :
+		case VAR_NUM :
+		case VAR :
+		case POW_NUM :{
+			factoryPoly.Mult(pRezSubExpr);
+			break;
+		}
+		}
 	}
 	protected STATE ParseEq(final PolyGenerator factoryPoly, final SIterator it, final STATE stare) {
 		factoryPoly.AddMonom();
@@ -346,25 +383,75 @@ public class Parser {
 		}
 	}
 	
+	protected int BracketClose(final SIterator itOld) {
+		final SIterator itBracket = new SIterator(itOld);
+		int countBrackets = 1;
+		
+		while(itBracket.HasNext()) {
+			final char ch = itBracket.Next();
+			if(ch == '(') {
+				countBrackets ++;
+			} else if(ch == '=') {
+				this.Error("Unexpected '=' at pos = ", itBracket.Position());
+				return -1;
+			} else if(ch == ')') {
+				countBrackets --;
+				if(countBrackets == 0) {
+					// System.out.println(itBracket.npos);
+					return itBracket.Position();
+				}
+			}
+			itBracket.Inc();
+		}
+		// ERROR
+		this.Error("Unexpected End of Input string; pos = ", itBracket.Position());
+		return -1;
+	}
+	
 	// ++++++++ helper classes +++++++++++
 	
 	protected class SIterator {
+		// Note: needs explicit Inc()!
+		
 		// pozitia in String
 		protected int npos = 0;
+		protected final int nposEnd;
 		protected final String sInput;
 		// +++++++++++++++++
 		public SIterator(final String sInput, final int nposStart) {
+			this(sInput, nposStart, sInput.length());
+		}
+		public SIterator(final String sInput, final int nposStart, final int nposEnd) {
 			this.npos = nposStart;
+			this.nposEnd = nposEnd;
 			this.sInput = sInput;
 		}
+		public SIterator(final SIterator itOther) {
+			this(itOther, itOther.nposEnd);
+		}
+		public SIterator(final SIterator itOther, final int nposEnd) {
+			this.npos = itOther.npos;
+			this.nposEnd = nposEnd;
+			this.sInput = itOther.sInput;
+		}
+		// ++++ Member Functions ++++
 		public boolean HasNext() {
-			return npos < sInput.length();
+			return npos < nposEnd;
 		}
 		public char Next() {
 			return sInput.charAt(npos);
 		}
 		public void Inc() {
 			npos ++;
+		}
+		public void Advance(final int npos) {
+			this.npos = npos;
+		}
+		public int End() {
+			return nposEnd;
+		}
+		public int Position() {
+			return npos;
 		}
 		public void Error(final STATE state) {
 			System.out.println("Error: pos = " + npos + "; " + state);
@@ -376,10 +463,12 @@ public class Parser {
 		// aici se vor genera polinoamele
 		private final MathTools math = new MathTools();
 
+		// invert all signs
 		boolean isAllNegativ = false;
-		// semnul coeficientului
+		// sign of next coefficient
 		boolean bSign = false;
 
+		// numeric Coefficient
 		boolean isFloat = false;
 		int iCoeff = 0;
 		int iFloatPart = 0;
@@ -388,7 +477,7 @@ public class Parser {
 		boolean isVarEnd = false;
 		int iPow   = 0;
 		
-		// TODO: Vector<> sau TreeMap<> cu variabilele
+		// TODO: Vector<> or TreeMap<> with all variables
 		final Polynom pRez;
 		Monom m = new Monom();
 		String sVar = "";
@@ -406,7 +495,24 @@ public class Parser {
 		}
 		public Polynom Add(final Polynom pAdd) {
 			// add in-place
+			if(IsNegative()) {
+				math.MultInPlace(pAdd, -1);
+				if(bSign) {
+					bSign = false;
+				}
+			}
 			math.AddInPlace(pRez, pAdd);
+			return pRez;
+		}
+		public Polynom Mult(final Polynom pMult) {
+			// TODO: needs a Parse Tree:
+			// Mult only previous M/P: M1 + M2 * P3
+			// [Add] Add after Mult: M1 + P2 * M3
+			final Monom mTemp = this.GetMonom();
+			final double dCoeff = this.GetCoeff(); // Initializes everything
+			// Error(mTemp.toString() + ": ", 0);
+			final Polynom pRezMult = math.Mult(pMult, mTemp, dCoeff);
+			math.AddInPlace(pRez, pRezMult);
 			return pRez;
 		}
 		
@@ -423,6 +529,10 @@ public class Parser {
 			iFloatLen  = 0;
 		}
 		
+		public boolean IsNegative() {
+			return (isAllNegativ && ! bSign) || (bSign && ! isAllNegativ);
+		}
+		
 		public void AddMonom() {
 			if(this.HasMonom()) {
 				pRez.Add(this.GetMonom(), this.GetCoeff());
@@ -436,18 +546,21 @@ public class Parser {
 			return m;
 		}
 		public double GetCoeff() {
+			final double dCoeff;
 			if(isFloat && iFloatPart != 0) {
-				// TODO: POWER
-				return ((double) iFloatPart) / 10 * iFloatLen + iCoeff;
+				// Error("Float " + iFloatPart + " / 10^ ", iFloatLen);
+				dCoeff = ((double) iFloatPart) / math.Pow(10, iFloatLen) + iCoeff;
 			} else if( ! m.isEmpty() && iCoeff == 0 && iFloatPart == 0) {
-				iCoeff = 1;
+				dCoeff = 1;
+			} else {
+				dCoeff = iCoeff;
 			}
 			if(isAllNegativ) {
 				bSign = ! bSign;
 			}
-			final int iCoeff = (bSign) ? -this.iCoeff : this.iCoeff;
+			final boolean bSign = this.bSign;
 			this.Init();
-			return iCoeff;
+			return (bSign) ? - dCoeff : dCoeff;
 		}
 		public boolean SetAllNegativ() {
 			if(isAllNegativ) {
@@ -465,7 +578,7 @@ public class Parser {
 			}
 			sVar += ch;
 			// TODO:
-			// puteti folosi o optiune, daca sunt acceptate variabile cu >=2 caractere
+			// Option: variables with 1 or with >=2 characters
 		}
 		public void EndVar() {
 			isVarEnd = true;
@@ -488,8 +601,10 @@ public class Parser {
 			if(isFloat) {
 				iFloatPart = iFloatPart * 10 + (ch - '0');
 				iFloatLen ++ ;
+				// Error("" + ch + ": ", iFloatLen);
 			} else {
 				iCoeff = iCoeff * 10 + (ch - '0');
+				// Error("Set " + ch + ": ", iCoeff);
 			}
 		}
 		public void SetFloat() {

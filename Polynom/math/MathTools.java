@@ -379,9 +379,9 @@ public class MathTools {
 	}
 	
 	// +++ Replace: sum(var^i) with dVal
-	public Polynom ReplaceSeq(final Polynom p, final String sVarName, final int iMaxPow, final double dVal) {
-		Polynom polyRez =  new Polynom(p.sRootName);
-		final Polynom pTemp = new Polynom(p);
+	public Polynom ReplaceSeq(final Polynom pOriginal, final String sVarName, final int iMaxPow, final double dVal) {
+		Polynom polyRez =  new Polynom(pOriginal.sRootName);
+		final Polynom pTemp = new Polynom(pOriginal);
 		
 		Iterator<Map.Entry<Monom, Double>> itM = pTemp.entrySet().iterator();
 		
@@ -389,6 +389,7 @@ public class MathTools {
 			final Map.Entry<Monom, Double> entryM = itM.next();
 			final Integer nPow = entryM.getKey().get(sVarName);
 			if(nPow == null) {
+				// processes only seq of type: 1 + m + m^2 + ...
 				polyRez = this.Add(polyRez, entryM.getKey(), entryM.getValue());
 				itM.remove();
 				continue;
@@ -397,29 +398,60 @@ public class MathTools {
 			final Monom mWBase = this.Div(entryM.getKey(), sVarName, nPow);
 			final Monom mW = new Monom(mWBase);
 			boolean isPresent = true;
-			double dMaxCoeff = Double.MAX_VALUE;
-			for(int iPow=1; iPow <= iMaxPow; iPow++) {
-				mW.Add(sVarName, 1);
-				final Double dCoeff = p.get(mW);
+			int iMissingPow = -1;
+			double dMaxCoeff = entryM.getValue(); // Double.MAX_VALUE;
+			// m + m^2 + ...
+			for(int iPow=0; iPow <= iMaxPow; iPow++) {
+				if(iPow > 0) {
+					mW.Add(sVarName, 1);
+				}
+				final Double dCoeff = pTemp.get(mW);
 				if(dCoeff == null) {
+					if(iMissingPow < 0) {
+						iMissingPow = iPow;
+						continue;
+					} else {
+						isPresent = false;
+						break;
+					}
+				}
+				// Cases: Coeff > 0 vs Coeff < 0
+				if(dMaxCoeff > 0 && dCoeff > 0) {
+					dMaxCoeff = Math.min(dMaxCoeff, dCoeff);
+				} else if(dMaxCoeff < 0 && dCoeff < 0) {
+					dMaxCoeff = Math.max(dMaxCoeff, dCoeff);
+				} else {
+					if(iMissingPow < 0) {
+						// TODO: which Power is correct?
+						iMissingPow = iPow;
+						continue;
+					}
 					isPresent = false;
 					break;
 				}
-				dMaxCoeff = Math.min(dMaxCoeff, dCoeff);
 			}
 			// ! isPresent
 			if( ! isPresent) {
 				polyRez = this.Add(polyRez, entryM.getKey(), entryM.getValue());
 				itM.remove();
+				// TODO: optimize and add all Terms?
 				continue;
 			}
 			// isPresent
-			polyRez = this.Add(polyRez, new Monom(mWBase), dMaxCoeff * dVal);
-			for(int iPow=1; iPow <= iMaxPow; iPow++) {
-				mWBase.Add(sVarName, 1);
-				final Double dCoeff = p.get(mWBase);
-				if(dCoeff != dMaxCoeff) {
-					polyRez = this.Add(polyRez, new Monom(mWBase), entryM.getValue() - dMaxCoeff);
+			if(iMissingPow >= 0) {
+				final Monom mReplacement = new Monom(mWBase);
+				if(iMissingPow > 0) {
+					mReplacement.Add(sVarName, iMissingPow);
+				}
+				polyRez = this.Add(polyRez, mReplacement, dMaxCoeff * dVal);
+			} // ELSE: terms Cancel out!
+			for(int iPow=0; iPow <= iMaxPow; iPow++) {
+				if(iPow > 0) {
+					mWBase.Add(sVarName, 1);
+				}
+				final Double dCoeff = pTemp.get(mWBase);
+				if(dCoeff != null && dCoeff != dMaxCoeff) {
+					polyRez = this.Add(polyRez, new Monom(mWBase), dCoeff - dMaxCoeff);
 				}
 				pTemp.remove(mWBase);
 			}

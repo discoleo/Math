@@ -261,6 +261,23 @@ public class MathTools {
 		return iMaxPow;
 	}
 	
+	// +++ Select Subsequence +++
+	public Polynom Subsequence(final Polynom p, final String sVarName, final int iPow) {
+		final String sRootName = p.sRootName;
+		final Polynom polyRez =  new Polynom(sRootName);
+		
+		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+			final Integer nPow = entryM.getKey().get(sVarName);
+			if(iPow == 0 && nPow == null) {
+				this.Add(polyRez, entryM.getKey(), entryM.getValue());
+			} else if(nPow != null && nPow == iPow) {
+				// in place addition
+				this.Add(polyRez, entryM.getKey(), entryM.getValue());
+			}
+		}
+		return polyRez;
+	}
+	
 	// +++ Variable Replacements +++
 	
 	// +++ Reduce: Var^p to Num
@@ -342,6 +359,9 @@ public class MathTools {
 	
 
 	// +++ Convolve: Replace 1 variable with a polynomial
+	public Polynom Replace(final Polynom p, final String sVarName, final Monom m) {
+		return this.Replace(p, sVarName, new Polynom(m, 1, p.sRootName)); // TODO: Root name
+	}
 	public Polynom Replace(final Polynom p, final String sVarName, final Polynom pW) {
 		final boolean isSameVar = p.sRootName.equals(sVarName);
 		final String sRootName = isSameVar ? pW.sRootName : p.sRootName;

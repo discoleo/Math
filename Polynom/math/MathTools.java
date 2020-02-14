@@ -260,6 +260,17 @@ public class MathTools {
 		}
 		return iMaxPow;
 	}
+	public int SamePower(final Polynom p, final String sVar) {
+		// assumes NO monomes with coeff = 0;
+		final int iPow = p.firstKey().getOrDefault(sVar, 0);
+		
+		for(final Monom m : p.keySet()) {
+			if(iPow != m.getOrDefault(sVar, 0)) {
+				return - 1;
+			}
+		}
+		return iPow;
+	}
 	
 	// +++ Select Subsequence +++
 	public Polynom Subsequence(final Polynom p, final String sVarName, final int iPow) {
@@ -276,6 +287,31 @@ public class MathTools {
 			}
 		}
 		return polyRez;
+	}
+	public int [] SubSequencePow(final Polynom p1, final Polynom p2, final int nOrder,
+			final String sVarName, final String sUnity) {
+		final int [] iPowSeq = new int [nOrder];
+		
+		for(int nPow = nOrder - 1; nPow >= 0; nPow--) {
+			final Polynom p1Sub = Replace(Subsequence(p1, sVarName, nPow), sVarName, 1, 1);
+			final Polynom p2Sub = Replace(Subsequence(p2, sVarName, nPow), sVarName, 1, 1);
+			// System.out.println("x Power: " + nPow);
+			final int iUPow = SamePower(p2Sub, sUnity);
+			if(iUPow < 0) {
+				iPowSeq[nPow] = -999;
+			} else {
+				final Polynom p2SubSub = Replace(Subsequence(p2Sub, sUnity, iUPow), sUnity, iUPow, 1);
+				final Polynom pDiff = Diff(p1Sub, p2SubSub);
+				// System.out.println("Size: " + pDiff.size());
+				if(pDiff.size() == 0) {
+					// System.out.println("Size: " + p2SubSub.size());
+					iPowSeq[nPow] = iUPow;
+				} else {
+					iPowSeq[nPow] = (iUPow == 0) ? -990 : -iUPow;
+				}
+			}
+		}
+		return iPowSeq;
 	}
 	
 	// +++ Variable Replacements +++

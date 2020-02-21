@@ -1,8 +1,3 @@
-package math;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Vector;
-
 /*
  * Various MathTools for Polynomials
  * 
@@ -11,6 +6,17 @@ import java.util.Vector;
  * License: GPL v.3
  * 
  * */
+package math;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Vector;
+
+import data.Monom;
+import data.Pair;
+import data.Polynom;
+import data.PowGrade;
+
+
 public class MathTools {
 	
 	// ++++ Polynom helper Functions ++++
@@ -290,6 +296,7 @@ public class MathTools {
 	}
 	public int [] SubSequencePow(final Polynom p1, final Polynom p2, final int nOrder,
 			final String sVarName, final String sUnity) {
+		// assumes same powers for the main Var;
 		final int [] iPowSeq = new int [nOrder];
 		
 		for(int nPow = nOrder - 1; nPow >= 0; nPow--) {
@@ -342,6 +349,7 @@ public class MathTools {
 				this.Add(polyRez, mRemaining, dCoeff);
 			}
 		}
+		// System.out.println(polyRez.toString());
 		return polyRez;
 	}
 	
@@ -435,28 +443,37 @@ public class MathTools {
 	}
 	
 	// +++ Replace: sum(var^i) with dVal
-	public Polynom ReplaceSeq(final Polynom pOriginal, final String sVarName, final int iMaxPow, final double dVal) {
+	public Polynom ReplaceSeq(final Polynom pOriginal, final String sVarName, final PowGrade powGrade) {
+		// processes only seq of type: 1 + m + m^2 + ...
 		Polynom polyRez =  new Polynom(pOriginal.sRootName);
 		final Polynom pTemp = new Polynom(pOriginal);
+		final int iMaxPow = powGrade.MaxPow();
+		final double dVal = - powGrade.dVal;
 		
 		Iterator<Map.Entry<Monom, Double>> itM = pTemp.entrySet().iterator();
 		
+		// TODO: !! BUG !!
 		while(itM.hasNext()) {
 			final Map.Entry<Monom, Double> entryM = itM.next();
-			final Integer nPow = entryM.getKey().get(sVarName);
-			if(nPow == null) {
-				// processes only seq of type: 1 + m + m^2 + ...
-				polyRez = this.Add(polyRez, entryM.getKey(), entryM.getValue());
-				itM.remove();
-				continue;
+			final int nPow = entryM.getKey().getOrDefault(sVarName, 0);
+			final Monom mWBase;
+			if(nPow == 0) {
+				mWBase = entryM.getKey();
+				// polyRez = this.Add(polyRez, entryM.getKey(), entryM.getValue());
+				// itM.remove();
+				// continue;
+			} else {
+				mWBase = this.Div(entryM.getKey(), sVarName, nPow);
 			}
 			// TODO: nPow > iMaxPow
-			final Monom mWBase = this.Div(entryM.getKey(), sVarName, nPow);
 			final Monom mW = new Monom(mWBase);
 			boolean isPresent = true;
 			int iMissingPow = -1;
-			double dMaxCoeff = entryM.getValue(); // Double.MAX_VALUE;
-			// m + m^2 + ...
+			int countPos = 0;
+			int countNeg = 0;
+			double dMinCoeff = Double.POSITIVE_INFINITY;
+			double dMaxCoeff = Double.NEGATIVE_INFINITY;
+			// 1 + m + m^2 + ...
 			for(int iPow=0; iPow <= iMaxPow; iPow++) {
 				if(iPow > 0) {
 					mW.Add(sVarName, 1);
@@ -472,10 +489,12 @@ public class MathTools {
 					}
 				}
 				// Cases: Coeff > 0 vs Coeff < 0
-				if(dMaxCoeff > 0 && dCoeff > 0) {
-					dMaxCoeff = Math.min(dMaxCoeff, dCoeff);
-				} else if(dMaxCoeff < 0 && dCoeff < 0) {
+				if(dCoeff > 0) {
+					dMaxCoeff = Math.min(dMinCoeff, dCoeff);
+					countPos ++ ;
+				} else if(dCoeff < 0) {
 					dMaxCoeff = Math.max(dMaxCoeff, dCoeff);
+					countNeg ++;
 				} else {
 					if(iMissingPow < 0) {
 						// TODO: which Power is correct?
@@ -487,6 +506,9 @@ public class MathTools {
 				}
 			}
 			// ! isPresent
+			if(isPresent && countPos < iMaxPow && countNeg < iMaxPow) {
+				isPresent = false;
+			}
 			if( ! isPresent) {
 				polyRez = this.Add(polyRez, entryM.getKey(), entryM.getValue());
 				itM.remove();
@@ -494,19 +516,14 @@ public class MathTools {
 				continue;
 			}
 			// isPresent
-			if(iMissingPow >= 0) {
-				final Monom mReplacement = new Monom(mWBase);
-				if(iMissingPow > 0) {
-					mReplacement.Add(sVarName, iMissingPow);
-				}
-				polyRez = this.Add(polyRez, mReplacement, dMaxCoeff * dVal);
-			} // ELSE: terms Cancel out!
 			for(int iPow=0; iPow <= iMaxPow; iPow++) {
 				if(iPow > 0) {
 					mWBase.Add(sVarName, 1);
 				}
 				final Double dCoeff = pTemp.get(mWBase);
-				if(dCoeff != null && dCoeff != dMaxCoeff) {
+				if(dCoeff == null) {
+					polyRez = this.Add(polyRez, new Monom(mWBase), - dMaxCoeff);
+				} else if(dCoeff != dMaxCoeff) {
 					polyRez = this.Add(polyRez, new Monom(mWBase), dCoeff - dMaxCoeff);
 				}
 				pTemp.remove(mWBase);
@@ -514,6 +531,115 @@ public class MathTools {
 			itM = pTemp.entrySet().iterator();
 		}
 		return polyRez;
+	}
+	
+	public Polynom ReplaceSeqMult(final Polynom pOriginal, final String sVarName,
+			final PowGrade powGrade, final int iMaxMissing) {
+		// replace Seq with multiple terms missing
+		Polynom polyRez =  new Polynom(pOriginal.sRootName);
+		final Polynom pTemp = new Polynom(pOriginal);
+		// final int iMaxPow = powGrade.MaxPow();
+		// final double dVal = - powGrade.dVal;
+		
+		Iterator<Map.Entry<Monom, Double>> itM = pTemp.entrySet().iterator();
+		
+		while(itM.hasNext()) {
+			final Map.Entry<Monom, Double> entryM = itM.next();
+			final Integer nPow = entryM.getKey().get(sVarName);
+			
+			final Monom mWBase;
+			// TODO: nPow > iMaxPow
+			if(nPow == null) {
+				mWBase = entryM.getKey();
+			} else {
+				mWBase = this.Div(entryM.getKey(), sVarName, nPow);
+			}
+			final Monom mBase = new Monom(mWBase);
+			
+			final Pair<Vector<Pair<Monom, Double>>, Double> vMonoms =
+					this.HasSeq(pTemp, mBase, sVarName, powGrade, iMaxMissing);
+			// ! isPresent
+			if(vMonoms.val == 0) {
+				for(final Pair<Monom, Double> pair : vMonoms.key) {
+					if(pair.val != 0) {
+						polyRez = this.Add(polyRez, pair.key, pair.val);
+					}
+					pTemp.remove(pair.key);
+				}
+			}
+			// isPresent
+			else {
+				// process original Terms
+				// processes automatically the Complement as well
+				for(final Pair<Monom, Double> pair : vMonoms.key) {
+					final double dRemaining = pair.val - vMonoms.val;
+					if(dRemaining != 0) {
+						polyRez = this.Add(polyRez, pair.key, dRemaining);
+					}
+					pTemp.remove(pair.key);
+				}
+			}
+			// update Iterator
+			itM = pTemp.entrySet().iterator();
+		}
+		return polyRez;
+	}
+	
+	public Pair<Vector<Pair<Monom, Double>>, Double> HasSeq(final Polynom p, final Monom mBase,
+			final String sVarName,
+			final PowGrade powGrade, final int iMaxMissing) {
+		final int iMaxPow = powGrade.MaxPow();
+		final int lenPow = iMaxPow + 1;
+		
+		final Vector<Pair<Monom, Double>> vMonoms = new Vector<>();
+
+		int iMissing = 0;
+		for(int iPow=0; iPow <= iMaxPow; iPow++) {
+			if(iPow > 0) {
+				mBase.Add(sVarName, 1);
+			}
+			final Double dCoeff = p.getOrDefault(mBase, 0d);
+			if(dCoeff == 0) {
+				iMissing ++;
+			}
+			final Pair<Monom, Double> pair = new Pair<>(new Monom(mBase), dCoeff);
+			vMonoms.add(pair);
+		}
+		// only existence of Sub-seq;
+		if(iMissing > iMaxMissing) {
+			return new Pair<> (vMonoms, 0d);
+		} else {
+			final double dMaxCoeff = this.HasSeq(vMonoms, lenPow - iMaxMissing);
+			// System.out.println(mBase.toString() + ": " + dMaxCoeff + ", " + (lenPow - iMaxMissing));
+			return new Pair<> (vMonoms, dMaxCoeff);
+		}
+	}
+	public double HasSeq(final Vector<Pair<Monom, Double>> vMonoms, final int iMinCount) {
+		// Note: some terms may be already missing from the Vector;
+		// TODO: version for roots of minus-Unity;
+		int countPos = 0;
+		int countNeg = 0;
+		double dMin = Double.POSITIVE_INFINITY;
+		double dMax = Double.NEGATIVE_INFINITY;
+		for(final Pair<Monom, Double> pair : vMonoms) {
+			if(pair.val > 0) {
+				countPos ++;
+				if(pair.val < dMin) {
+					dMin = pair.val;
+				}
+			} else if(pair.val < 0) {
+				countNeg ++;
+				if(pair.val > dMax) {
+					dMax = pair.val;
+				}
+			}
+		}
+		if(countPos >= iMinCount) {
+			return dMin;
+		} else if(countNeg >= iMinCount) {
+			return dMax;
+		}
+		return 0;
 	}
 	
 	// +++ helper Functions +++

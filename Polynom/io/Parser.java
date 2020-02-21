@@ -1,9 +1,3 @@
-package io;
-
-import math.MathTools;
-import math.Monom;
-import math.Polynom;
-
 /*
  * The Polynomial Parser
  * 
@@ -12,6 +6,13 @@ import math.Polynom;
  * License: GPL v.3
  * 
  * */
+package io;
+
+import data.Monom;
+import data.Polynom;
+import math.MathTools;
+
+
 public class Parser {
 	
 	protected boolean isVarNumeric = true;

@@ -219,6 +219,16 @@ public class MathTools {
 		}
 		return p1;
 	}
+
+	public Polynom RemoveInPlace(final Polynom p1, final Polynom p2Const) {
+		// remove p2Const from p1: assumes equal Coefficients
+		final Iterator<Monom> itP2 = p2Const.keySet().iterator();
+		while(itP2.hasNext()) {
+			final Monom mP2 = itP2.next();
+			p1.remove(mP2);
+		}
+		return p1;
+	}
 	public Polynom Diff(final Polynom p1, final Polynom p2) {
 		// Diferenta dintre 2 polinoame
 		final Polynom pRez = new Polynom(p1.sRootName);
@@ -279,7 +289,7 @@ public class MathTools {
 	}
 	
 	// +++ Select Subsequence +++
-	public Polynom Subsequence(final Polynom p, final String sVarName, final int iPow) {
+	public Polynom SubSequence(final Polynom p, final String sVarName, final int iPow) {
 		final String sRootName = p.sRootName;
 		final Polynom polyRez =  new Polynom(sRootName);
 		
@@ -300,14 +310,14 @@ public class MathTools {
 		final int [] iPowSeq = new int [nOrder];
 		
 		for(int nPow = nOrder - 1; nPow >= 0; nPow--) {
-			final Polynom p1Sub = Replace(Subsequence(p1, sVarName, nPow), sVarName, 1, 1);
-			final Polynom p2Sub = Replace(Subsequence(p2, sVarName, nPow), sVarName, 1, 1);
+			final Polynom p1Sub = Replace(SubSequence(p1, sVarName, nPow), sVarName, 1, 1);
+			final Polynom p2Sub = Replace(SubSequence(p2, sVarName, nPow), sVarName, 1, 1);
 			// System.out.println("x Power: " + nPow);
 			final int iUPow = SamePower(p2Sub, sUnity);
 			if(iUPow < 0) {
 				iPowSeq[nPow] = -999;
 			} else {
-				final Polynom p2SubSub = Replace(Subsequence(p2Sub, sUnity, iUPow), sUnity, iUPow, 1);
+				final Polynom p2SubSub = Replace(SubSequence(p2Sub, sUnity, iUPow), sUnity, iUPow, 1);
 				final Polynom pDiff = Diff(p1Sub, p2SubSub);
 				// System.out.println("Size: " + pDiff.size());
 				if(pDiff.size() == 0) {
@@ -583,6 +593,53 @@ public class MathTools {
 			itM = pTemp.entrySet().iterator();
 		}
 		return polyRez;
+	}
+	
+	public Polynom ReplaceSeqByVar(final Polynom pOriginal,
+			final Polynom pSubSeq, final String sSubSeqName, final PowGrade powGrade) {
+		// assumes "x" = variable (sRootName)
+		final String sVarPrimary = pOriginal.sRootName;
+		final Monom m = new Monom();
+		final Polynom pRez = new Polynom(pOriginal);
+		final Monom mSubSeqNew = new Monom(sSubSeqName, 1);
+		
+		for(int iPow=0; iPow < powGrade.iPow; iPow++) {
+			if(iPow > 0) {
+				m.Add(sVarPrimary, 1);
+			}
+			boolean hasSubSeq = true;
+			double dCoeffBase = 0;
+			for(final Monom mSub : pSubSeq.keySet()) {
+				final Monom mSubX = new Monom(mSub).Add(sVarPrimary, iPow);
+				final Double dCoeff = pOriginal.get(mSubX);
+				if(dCoeff == null || dCoeff == 0) {
+					hasSubSeq = false;
+					break;
+				}
+				if(dCoeffBase == 0) {
+					dCoeffBase = dCoeff;
+				} else if(dCoeffBase != dCoeff) {
+					hasSubSeq = false;
+					break;
+				}
+			}
+			if( ! hasSubSeq) {
+				continue;
+			}
+			// remove SubSeq
+			final Polynom pSubSeqRemove;
+			if(iPow > 0) {
+				final Monom mX = new Monom(sVarPrimary, iPow);
+				pSubSeqRemove = this.Mult(pSubSeq, mX);
+			} else {
+				pSubSeqRemove = pSubSeq;
+			}
+			this.RemoveInPlace(pRez, pSubSeqRemove);
+			// replace SubSeq
+			final Monom mSubSeqRepl = new Monom(mSubSeqNew).Add(sVarPrimary, iPow);
+			pRez.Add(mSubSeqRepl, dCoeffBase);
+		}
+		return pRez;
 	}
 	
 	public Pair<Vector<Pair<Monom, Double>>, Double> HasSeq(final Polynom p, final Monom mBase,

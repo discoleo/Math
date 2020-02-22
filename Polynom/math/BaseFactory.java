@@ -43,6 +43,19 @@ public class BaseFactory {
 				.Add(sB1, 1), 1, "x")
 				.Add(new Monom(sB0, 1), 1);
 	}
+
+	public Polynom Create(final Vector<Polynom> vPCoef, final String sVarName) {
+		// create a multivariable polynomial from its parametric coefficients;
+		Polynom polyRez =  new Polynom(sVarName);
+		int nPow = vPCoef.size() - 1;
+		for(final Polynom p : vPCoef) {
+			final Polynom pRez = math.AddVar(p, sVarName, nPow);
+			polyRez = math.Add(polyRez, pRez);
+			nPow --;
+		}
+		
+		return polyRez;
+	}
 	
 	// ++++ Roots of Unity ++++
 	public Vector<Monom> GetRootsUnity(final int nOrder) {
@@ -216,5 +229,63 @@ public class BaseFactory {
 		}
 		
 		return pSeq;
+	}
+	
+	// +++ Replace Sub-Sequences +++
+	
+	public Polynom ReplaceSubSequence(final Polynom p, final String [] sVarNames, final PowGrade powGrade) {
+		Polynom pRez = new Polynom(p);
+		final int iPowHalf = powGrade.iPow / 2;
+		
+		for(int iPow = 1; iPow <= iPowHalf; iPow++) {
+			for(final String sVarName : sVarNames) {
+				final String sVarNew = sVarName + "S" + iPow;
+				pRez = math.ReplaceSeqByVar(pRez,
+						this.SubSequence(sVarName, "m", iPow, powGrade), sVarNew, powGrade);
+			}
+		}
+		// Zero: optimization at the end
+		for(final String sVarName : sVarNames) {
+			final String sVarNew = sVarName;
+			pRez = math.ReplaceSeqByVar(pRez,
+					this.SubSequence(sVarName, "m", 0, powGrade), sVarNew, powGrade);
+		}
+		
+		return pRez;
+	}
+	
+	// Generate Sub-Sequences
+	public Polynom SubSequence(final String sCoeff, final String sUnity, final PowGrade powGrade) {
+		return this.SubSequence(sCoeff, sUnity, 1, powGrade);
+	}
+	public Polynom SubSequence(final String sCoeff, final String sUnity, final int iOffset, final PowGrade powGrade) {
+		if(iOffset == 0) {
+			return this.SubSequenceZero(sCoeff, powGrade);
+		}
+		final int iPowHalf = powGrade.iPow / 2;
+		final Polynom pRez = new Polynom(sUnity);
+		
+		for(int iPowBase = 1; iPowBase <= iPowHalf; iPowBase++) {
+			final int iPowOffset = (iPowBase * iOffset) % powGrade.iPow;
+			final String sCoeffI = sCoeff + iPowBase;
+			final Monom m1 = new Monom(sCoeffI, 1).Add(sUnity, iPowOffset);
+			final Monom m1Inv = new Monom(sCoeffI, 1).Add(sUnity, powGrade.iPow - iPowOffset);
+			pRez.Add(m1, 1);
+			pRez.Add(m1Inv, 1);
+		}
+		
+		return pRez;
+	}
+	public Polynom SubSequenceZero(final String sCoeff, final PowGrade powGrade) {
+		final int iPowHalf = powGrade.iPow / 2;
+		final Polynom pRez = new Polynom();
+		
+		for(int iPowBase = 1; iPowBase <= iPowHalf; iPowBase++) {
+			final String sCoeffI = sCoeff + iPowBase;
+			final Monom m1 = new Monom(sCoeffI, 1);
+			pRez.Add(m1, 1);
+		}
+		
+		return pRez;
 	}
 }

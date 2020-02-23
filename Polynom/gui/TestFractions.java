@@ -22,6 +22,8 @@ public class TestFractions {
 
 	protected final Parser parser;
 	protected final MathTools math;
+	// PolyFactory is an enhanced version of BaseFactory
+	// many functions may be available in BaseFactory
 	protected final PolyFactory polyFact;
 	
 	protected final Solver solver;

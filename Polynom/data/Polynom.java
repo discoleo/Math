@@ -91,9 +91,49 @@ public class Polynom extends TreeMap<Monom, Double> {
 		}
 		return this;
 	}
+
+	public Polynom Add(final double d) {
+		if(d == 0) {
+			return this;
+		}
+		final Monom mFree = new Monom();
+		final Double dFreeTerm = this.get(mFree);
+		if(dFreeTerm == null) {
+			this.put(mFree, d);
+		} else {
+			final double dCoeff = dFreeTerm + d;
+			if(dCoeff == 0) {
+				this.remove(mFree);
+			} else {
+				this.put(mFree, dCoeff);
+			}
+		}
+		return this;
+	}
+	public Polynom Add(final int i) {
+		if(i == 0) {
+			return this;
+		}
+		final Monom mFree = new Monom();
+		final Double dFreeTerm = this.get(mFree);
+		if(dFreeTerm == null) {
+			this.put(mFree, (double) i);
+		} else {
+			final double dCoeff = dFreeTerm + i;
+			if(dCoeff == 0) {
+				this.remove(mFree);
+			} else {
+				this.put(mFree, dCoeff);
+			}
+		}
+		return this;
+	}
 	
 	@Override
 	public String toString() {
+		if(this.isEmpty()) {
+			return "0";
+		}
 		final StringBuilder sb = new StringBuilder();
 		for(final Map.Entry<Monom, Double> entry : this.entrySet()) {
 			final double dCoeff = entry.getValue();
@@ -113,10 +153,9 @@ public class Polynom extends TreeMap<Monom, Double> {
 			final int iCoeffSign = (int) dCoeffSign;
 			final boolean isInt = (iCoeffSign == dCoeffSign);
 			if(entry.getKey().isEmpty()) {
+				// free Term
 				if(isInt) {
-					if(iCoeffSign != 1) {
-						sb.append(iCoeffSign); // TODO: check if correct
-					}
+					sb.append(iCoeffSign);
 				} else {
 					sb.append(dCoeffSign);
 				}

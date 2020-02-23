@@ -25,6 +25,13 @@ public class MathTools {
 	public Polynom Mult(final Polynom p1, final int iMult) {
 		return this.Mult(p1, iMult, 1);
 	}
+	public Polynom MultInPlace(final Polynom p1, final int dM, final double dD) {
+		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
+			final double dRez = entry.getValue() * dM / dD;
+			p1.put(entry.getKey(), dRez);
+		}
+		return p1;
+	}
 	public Polynom Mult(final Polynom p1, final int iM, final int iD) {
 		// multiplicare si diviziune polinom cu o valoare numerica;
 		// de fapt vom procesa doar coeficientii;
@@ -195,6 +202,25 @@ public class MathTools {
 		return pRez;
 	}
 	public Polynom AddInPlace(final Polynom p1, final Polynom p2Const) {
+		final Iterator<Map.Entry<Monom, Double>> itP2 = p2Const.entrySet().iterator();
+		
+		while(itP2.hasNext()) {
+			final Map.Entry<Monom, Double> entryP2 = itP2.next();
+			final Double dCoeff = p1.get(entryP2.getKey());
+			if(dCoeff == null) {
+				p1.put(entryP2.getKey(), entryP2.getValue());
+			} else {
+				final double dCoeffRez = entryP2.getValue() + dCoeff;
+				if(dCoeffRez != 0) {
+					p1.put(entryP2.getKey(), dCoeffRez);
+				} else {
+					p1.remove(entryP2.getKey());
+				}
+			}
+		}
+		return p1;
+	}
+	public Polynom AddInPlaceOld(final Polynom p1, final Polynom p2Const) {
 		final Polynom p2Temp = new Polynom(p2Const);
 		// Suma dintre 2 polinoame: in-place
 		final Iterator<Map.Entry<Monom, Double>> itP1 = p1.entrySet().iterator();

@@ -1,3 +1,12 @@
+/*
+ * Minimalistic Solver
+ * for Liniar Systems
+ * 
+ * (C) Leonard Mada
+ * 
+ * License: GPL v.3
+ * 
+ * */
 package math;
 
 import java.util.Iterator;
@@ -19,6 +28,8 @@ public class Solver {
 	}
 	
 	// TODO:
+	// - filter non-unique variables;
+	// - ...;
 	
 	public SolutionPoly SimpleLinearZero(final PolySeq pSeq, final String sVarKnown) {
 		final SolutionPoly sol = new SolutionPoly();

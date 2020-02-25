@@ -48,6 +48,12 @@ public class Monom extends TreeMap<String, Integer> {
 		iPTotala -= super.put(sVar, iPutere);
 		iPTotala += iPutere;
 	}
+	public Monom Add(final Monom m) {
+		for(final Map.Entry<String, Integer> entry : m.entrySet()) {
+			this.Add(entry.getKey(), entry.getValue());
+		}
+		return this;
+	}
 
 	@Override
 	public Integer put(final String sVar, final Integer iPutere) {

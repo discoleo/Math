@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Vector;
 
 import data.Monom;
+import data.Pair;
 import data.PolySeq;
 import data.Polynom;
 import data.PowGrade;
@@ -236,22 +237,50 @@ public class BaseFactory {
 	public Polynom ReplaceSubSequence(final Polynom p, final String [] sVarNames, final PowGrade powGrade) {
 		Polynom pRez = new Polynom(p);
 		final int iPowHalf = powGrade.iPow / 2;
+		final String sROOTS_UNITY = "m";
 		
 		for(int iPow = 1; iPow <= iPowHalf; iPow++) {
 			for(final String sVarName : sVarNames) {
 				final String sVarNew = sVarName + "S" + iPow;
 				pRez = math.ReplaceSeqByVar(pRez,
-						this.SubSequence(sVarName, "m", iPow, powGrade), sVarNew, powGrade);
+						this.SubSequence(sVarName, sROOTS_UNITY, iPow, powGrade), sVarNew, powGrade);
 			}
 		}
+		
+		final Polynom pMissed = math.FindAll(pRez, sROOTS_UNITY);
+		if(pMissed.size() > 0) {
+			// Error: NOT everything replaced
+			for(int iPow = 1; iPow <= iPowHalf; iPow++) {
+				for(final String sVarName : sVarNames) {
+					final String sVarNew = sVarName + "S" + iPow;
+					final Pair<Polynom, Polynom> pairMatch = math.Match(pMissed,
+							this.SubSequence(sVarName, sROOTS_UNITY, iPow, powGrade),
+							sVarNew, powGrade);
+					final Polynom pMatch = pairMatch.key;
+					if(pMatch != null && pMatch.size() > 0) {
+						System.out.println("Found Missing Terms");
+						System.out.println(pMatch.toString());
+						// Cancel the old Monoms
+						math.AddInPlace(pRez, pMatch);
+						// add the Replacement
+						math.AddInPlace(pRez, math.Mult(pairMatch.val, new Monom(sVarNew, 1)));
+						
+						for(final Monom mRemove : pMatch.keySet()) {
+							pMissed.remove(mRemove);
+						}
+					}
+				}
+			}
+		}
+		
 		// Zero: optimization at the end
 		for(final String sVarName : sVarNames) {
 			final String sVarNew = sVarName;
 			pRez = math.ReplaceSeqByVar(pRez,
-					this.SubSequence(sVarName, "m", 0, powGrade), sVarNew, powGrade);
+					this.SubSequence(sVarName, sROOTS_UNITY, 0, powGrade), sVarNew, powGrade);
 		}
 		
-		return pRez;
+		return math.Simplify(pRez, powGrade);
 	}
 	
 	// Generate Sub-Sequences

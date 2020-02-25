@@ -15,6 +15,7 @@ import data.Monom;
 import data.Pair;
 import data.Polynom;
 import data.PowGrade;
+import data.Unity;
 
 
 public class MathTools {
@@ -25,7 +26,10 @@ public class MathTools {
 	public Polynom Mult(final Polynom p1, final int iMult) {
 		return this.Mult(p1, iMult, 1);
 	}
-	public Polynom MultInPlace(final Polynom p1, final int dM, final double dD) {
+	public Polynom MultInPlace(final Polynom p1, final double dMult) {
+		return this.MultInPlace(p1, dMult, 1d);
+	}
+	public Polynom MultInPlace(final Polynom p1, final double dM, final double dD) {
 		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
 			final double dRez = entry.getValue() * dM / dD;
 			p1.put(entry.getKey(), dRez);
@@ -568,6 +572,35 @@ public class MathTools {
 		}
 		return polyRez;
 	}
+	public Polynom Simplify(final Polynom pOriginal, final PowGrade powGrade) {
+		final Pair<Polynom, Polynom> pairUnity = Unity.EvalSeq(powGrade);
+		if(pairUnity == null) {
+			return pOriginal;
+		}
+		// TODO: reuse code
+		while(true) {
+			Monom mFirst = pairUnity.key.firstKey();
+			final Monom mBase = this.Match(pOriginal, mFirst);
+			// TODO: break, if the entire Seq is NOT found;
+			if(mBase == null) { break; }
+			final Polynom pModify = this.Mult(pairUnity.key, mBase);
+			final double dCoeff = - this.HasSeq(pOriginal, pModify);
+			System.out.println(pModify.toString() + ": " + dCoeff);
+			if(dCoeff == 0) { break; }
+			
+			final Polynom pModifyCoeff =
+					this.MultInPlace(pModify, dCoeff);
+			final Polynom pAddCoeff =
+					this.MultInPlace(
+					this.Mult(pairUnity.val, mBase), -dCoeff);
+			this.AddInPlace(pOriginal, pModifyCoeff);
+			this.AddInPlace(pOriginal, pAddCoeff);
+			System.out.println(pModifyCoeff);
+			System.out.println(pAddCoeff);
+		}
+		
+		return pOriginal;
+	}
 	
 	public Polynom ReplaceSeqMult(final Polynom pOriginal, final String sVarName,
 			final PowGrade powGrade, final int iMaxMissing) {
@@ -668,6 +701,121 @@ public class MathTools {
 		return pRez;
 	}
 	
+	public Pair<Polynom, Polynom> Match(final Polynom pMonoms, final Polynom pSubSeq,
+			final String sSubSeqName, final PowGrade powGrade) {
+		// matches the SubSeq and computes the minimal matching Coeffs
+		// the Coeffs are inverted;
+		final int MAX_MISSING = 2;
+		final int lenMin = pSubSeq.size() - MAX_MISSING;
+		final Polynom pRez = new Polynom(pMonoms.sRootName);
+		final Polynom pNew = new Polynom(pMonoms.sRootName);
+		
+		int iRepeats = powGrade.iPow; // /2 ???
+		
+		REPEATS:
+		while(iRepeats > 0) {
+			iRepeats --;
+			final Iterator<Monom> itSeq = pSubSeq.keySet().iterator();
+			
+			int npos = 0;
+			while(itSeq.hasNext()) {
+				final Monom m = itSeq.next();
+				final Monom mVar = this.Match(pMonoms, m, pMonoms.sRootName);
+				if(mVar == null) { npos ++; continue; }
+				// found 1st Term
+				final Monom mCurrent = new Monom(mVar).Add(m);
+				// System.out.println(mVar);
+				// System.out.println(mCurrent);
+				
+				final double [] dCoeffs = new double [pSubSeq.size()];
+				dCoeffs[npos++] = pMonoms.getOrDefault(mCurrent, 0d);
+				// find all terms
+				while(itSeq.hasNext()) {
+					final Monom mNext = new Monom(itSeq.next()).Add(mVar);
+					dCoeffs[npos++] = pMonoms.getOrDefault(mNext, 0d);
+				}
+				// Check what is missing
+				final double dCoeffCommon = - this.CommonCoefficient(dCoeffs, lenMin);
+				if(dCoeffCommon == 0) {
+					continue REPEATS;
+				}
+				for(final Monom mKeys : pSubSeq.keySet()) {
+					final Monom mNewSeq = new Monom(mKeys).Add(mVar);
+					pRez.Add(mNewSeq, dCoeffCommon);
+					// need to Remove to process higher Powers
+					pMonoms.remove(mNewSeq);
+				}
+				pNew.Add(new Monom(mVar), -dCoeffCommon);
+			}
+		}
+		
+		
+		return new Pair<>(pRez, pNew);
+	}
+	
+	public Monom Match(final Polynom pMonoms, final Monom mToFind, final String sOtherVar) {
+		// must match "exactly", except for sOtherVar;
+		// [currently ignores powers]
+		EXTERNAL:
+		for(final Monom m : pMonoms.keySet()) {
+			if(m.size() < mToFind.size()) { continue; }
+			int countMatchedVars = 0;
+			Monom mVar = null;
+			for(final Map.Entry<String, Integer> entryM : m.entrySet()) {
+				if(entryM.getKey().equals(sOtherVar)) {
+					mVar = new Monom(entryM.getKey(), entryM.getValue());
+					continue;
+				}
+				final Integer iPow = mToFind.get(entryM.getKey());
+				if(iPow == null) {
+					continue EXTERNAL;
+				}
+				countMatchedVars ++;
+			}
+			if(countMatchedVars < mToFind.size()) { continue; }
+			if(mVar == null) {
+				mVar = new Monom();
+			}
+			return mVar;
+		}
+		return null;
+	}
+	public Monom Match(final Polynom pMonoms, final Monom mToFind) {
+		// common vars must match exactly;
+		// any other variables can be present in pMonoms;
+		EXTERNAL:
+		for(final Monom mP : pMonoms.keySet()) {
+			if(mP.size() < mToFind.size()) { continue; }
+			
+			for(final Map.Entry<String, Integer> entryVars : mToFind.entrySet()) {
+				final Integer iPow = mP.get(entryVars.getKey());
+				if(iPow == null || iPow != entryVars.getValue()) {
+					continue EXTERNAL;
+				}
+			}
+			return this.Div(mP, mToFind);
+		}
+		return null;
+	}
+	
+	public Monom FindFirst(final Polynom p, final String sVar) {
+		for(final Monom m : p.keySet()) {
+			if(m.containsKey(sVar)) {
+				return m;
+			}
+		}
+		return null;
+	}
+	public Polynom FindAll(final Polynom p, final String sVar) {
+		final Polynom pMonoms = new Polynom (p.sRootName);
+		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+			if(entryM.getKey().containsKey(sVar)) {
+				pMonoms.put(entryM.getKey(), entryM.getValue());
+			}
+		}
+		return pMonoms;
+	}
+	
 	public Pair<Vector<Pair<Monom, Double>>, Double> HasSeq(final Polynom p, final Monom mBase,
 			final String sVarName,
 			final PowGrade powGrade, final int iMaxMissing) {
@@ -724,6 +872,16 @@ public class MathTools {
 		}
 		return 0;
 	}
+	public double HasSeq(final Polynom p1, final Polynom pSeq) {
+		final int len = pSeq.size();
+		final double [] dCoeffs = new double[len];
+		
+		int npos = 0;
+		for(final Monom m : pSeq.keySet()) {
+			dCoeffs[npos++] = p1.getOrDefault(m, 0d);
+		}
+		return this.CommonCoefficient(dCoeffs, len);
+	}
 	
 	// +++ helper Functions +++
 
@@ -779,5 +937,32 @@ public class MathTools {
 		}
 		// System.out.println("" + iPow + ": " + dAcc * dValPow);
 		return dAcc * dValPow;
+	}
+	
+	public double CommonCoefficient(final double [] dCoeffs, final int lenMin) {
+		// Check what is missing
+		int countPos = 0;
+		double dCoeffPos = Double.POSITIVE_INFINITY;
+		int countNeg = 0;
+		double dCoeffNeg = Double.NEGATIVE_INFINITY;
+		for(int npos=0; npos < dCoeffs.length; npos++) {
+			if(dCoeffs[npos] > 0) {
+				countPos ++;
+				if(dCoeffPos > dCoeffs[npos]) { dCoeffPos = dCoeffs[npos]; }
+			} else if(dCoeffs[npos] < 0) {
+				countNeg ++;
+				if(dCoeffNeg < dCoeffs[npos]) { dCoeffNeg = dCoeffs[npos]; }
+			}
+		}
+		//
+		final double dCoeffCommon;
+		if(countPos > countNeg && countPos >= lenMin) {
+			dCoeffCommon = dCoeffPos;
+		} else if(countNeg >= lenMin) {
+			dCoeffCommon = dCoeffNeg;
+		} else {
+			dCoeffCommon = 0;
+		}
+		return dCoeffCommon;
 	}
 }

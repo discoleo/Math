@@ -9,6 +9,7 @@
  * */
 package gui;
 
+import data.PolySeq;
 import data.Polynom;
 import io.Parser;
 import math.MathTools;
@@ -18,9 +19,20 @@ public class BaseGui implements IDisplay {
 	
 	// minimalistic GUI
 
-	protected final Parser parser = new Parser();
-	protected final MathTools math = new MathTools();
-	protected final PolyFactory polyFact = new PolyFactory(math);
+	protected final Parser parser;
+	protected final MathTools math;
+	protected final PolyFactory polyFact;
+	
+	public BaseGui() {
+		parser = new Parser();
+		math = new MathTools();
+		polyFact = new PolyFactory(math);
+	}
+	public BaseGui(final BaseGui base) {
+		parser = base.parser;
+		math = base.math;
+		polyFact = base.polyFact;
+	}
 	
 	// ++++++++ MEMBER FUNCTIONS ++++++++++
 	
@@ -37,6 +49,10 @@ public class BaseGui implements IDisplay {
 	@Override
 	public void Display(final Polynom p) {
 		System.out.println(p.toString());
+	}
+	@Override
+	public void Display(final PolySeq p) {
+		System.out.println(p.Print());
 	}
 	
 	public void TestFractionDecomposition() {

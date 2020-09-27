@@ -30,7 +30,7 @@ public class TestFractions {
 	
 	protected IDisplay display;
 	
-	protected final boolean bTEST_CONJ_FRACTIONS = false;
+	protected final boolean bTEST_CONJ_FRACTIONS = true;
 	
 	public TestFractions(final Parser parser, final MathTools math, final PolyFactory polyFact,
 			final IDisplay display) {
@@ -47,17 +47,16 @@ public class TestFractions {
 
 	public void Test() {
 		display.Display("Testing Fractions:");
-
-		// Roots of Unity: 1/(x^n - 1)
-		final int nPow = 11;
-		this.TestFraction(nPow);
-
-		// Fractions 2:
+		
 		if( ! bTEST_CONJ_FRACTIONS) {
-			return;
+			// Roots of Unity: 1/(x^n - 1)
+			final int nPow = 25;
+			this.TestFraction(nPow);
+		} else {
+			// Fractions 2:
+			final int nPowConj = 5;
+			this.TestConjFractions(nPowConj);
 		}
-		final int nPowConj = 11;
-		this.TestConjFractions(nPowConj);
 	}
 	
 	public void TestFraction(final int nPow) {
@@ -77,7 +76,7 @@ public class TestFractions {
 	public void TestConjFractions(final int nPow) {
 		final Polynom pFraction = polyFact.BuildFractionConj(nPow);
 		display.Display("\nFraction:");
-		display.Display(pFraction);
+		display.Display(polyFact.ToSeq(pFraction, "x").Print());
 	}
 	
 	public void ValidateRationalization() {

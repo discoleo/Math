@@ -21,9 +21,9 @@ public class Monom extends TreeMap<String, Integer> {
 	
 	private int iPTotala = 0; // puterea totala
 	
-	public Monom(final String sVar, final Integer iPutere) {
-		if(iPutere != 0) {
-			this.put(sVar, iPutere);
+	public Monom(final String sVar, final Integer iPow) {
+		if(iPow != 0) {
+			this.put(sVar, iPow);
 		}
 	}
 	

@@ -10,6 +10,7 @@ package data;
 
 public class PowGrade {
 	
+	// m^iPow = dVal;
 	public final int iPow;
 	public final double dVal;
 	

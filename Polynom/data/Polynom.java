@@ -43,6 +43,17 @@ public class Polynom extends TreeMap<Monom, Double> {
 			this.put(m, value);
 		}
 	}
+	public Polynom(final int [] iCoeffDesc, final String sRootName) {
+		this(sRootName);
+		// Descending coefficients:
+		int iPow = iCoeffDesc.length - 1;
+		for(final int b : iCoeffDesc) {
+			if(b != 0) {
+				this.put(new Monom(sRootName, iPow), (double) b);
+			}
+			iPow --;
+		}
+	}
 	
 	// ++++++ Copy Constructor ++++++
 	public Polynom(final Polynom p) {
@@ -60,6 +71,14 @@ public class Polynom extends TreeMap<Monom, Double> {
 	
 	public String MainRootName() {
 		return sRootName;
+	}
+	
+	public boolean IsSortedByPrimary() {
+		final Comparator<?> cmp = this.comparator();
+		if(cmp instanceof ComparatorPolynom) {
+			return ((ComparatorPolynom) cmp).IsSortedByPrimary();
+		}
+		return false;
 	}
 
 	public Polynom Add(final int [] iCoeffs) {
@@ -188,16 +207,22 @@ public class Polynom extends TreeMap<Monom, Double> {
 			this.sPrimary = sPrimary;
 		}
 		
+		public boolean IsSortedByPrimary() {
+			return isPrimary;
+		}
+		
 		@Override
 		public int compare(final Monom m1, final Monom m2) {
+			// Ascending Order!
+			
 			// free Term
 			if(m1.size() == 0) {
 				if(m2.size() == 0) {
 					return 0;
 				}
-				return 1;
+				return -1; // First Term: -1
 			} else if(m2.size() == 0) {
-				return -1;
+				return 1;
 			}
 			
 			if(isPrimary) {

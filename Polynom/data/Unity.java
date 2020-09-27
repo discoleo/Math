@@ -11,6 +11,8 @@ public class Unity {
 			pUnity = Unity.CreateUnity(new int [] {3, 6});
 		} else if(powGrade.iPow == 15 && powGrade.dVal == 1) {
 			pUnity = Unity.CreateUnity(new int [] {3, 6, 9, 12});
+		} else if(powGrade.iPow == 25 && powGrade.dVal == 1) {
+			pUnity = Unity.CreateUnity(new int [] {5, 10, 15, 20});
 		} else {
 			return null;
 		}

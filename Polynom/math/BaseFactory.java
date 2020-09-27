@@ -58,6 +58,23 @@ public class BaseFactory {
 		return polyRez;
 	}
 	
+	// ++++ Derived Polynom ++++
+
+	public Polynom Derived(final Polynom pBase, final int [] iCoeffDerivedRoot, final Polynom pDerived) {
+		// TODO: derive poly from the Roots;
+		final Polynom pRoot = new Polynom(iCoeffDerivedRoot, "k");
+		return this.Derived(pBase, pRoot, pDerived);
+	}
+	public Polynom Derived(final Polynom pBase, final Polynom pRoot, final Polynom pDerived) {
+		final Polynom pSubst =
+				math.Replace(
+				math.Replace(pDerived, pDerived.sRootName, pRoot), pRoot.sRootName, 1, pBase.sRootName);
+		System.out.println(pSubst.toString());
+		final Polynom pDiv1 = math.Gcd(pSubst, pBase);
+		return pDiv1;
+		// TODO: return also Remainder;
+	}
+	
 	// ++++ Roots of Unity ++++
 	public Vector<Monom> GetRootsUnity(final int nOrder) {
 		final Vector<Monom> mRoots = new Vector<> ();
@@ -90,7 +107,7 @@ public class BaseFactory {
 		
 		return vRoots;
 	}
-	// +++ Fraction Decomposition
+	// +++ Fraction Decomposition: Roots of Unity
 	public Polynom BuildFractionUnity(final int nOrder) {
 		final Vector<Polynom> vTerms = this.GetConjRootsUnity(nOrder);
 		final String sB1 = "a";
@@ -132,13 +149,15 @@ public class BaseFactory {
 		}
 		
 		final PowGrade powGrade = new PowGrade(nOrder, 1);
+		final int iMaxMissing = (nOrder + 1) / 3;
 		// return math.ReplaceSeq(pSum, ROOT_UNITY, powGrade);
 		return math.ReplaceSeqMult(
-				math.ReplaceSeqMult(pSum, ROOT_UNITY, powGrade, 3),
-				ROOT_UNITY, powGrade, 3);
+				math.ReplaceSeqMult(pSum, ROOT_UNITY, powGrade, iMaxMissing),
+				ROOT_UNITY, powGrade, iMaxMissing);
 	}
 	
 	// ++++ Conjugated Roots ++++
+	// Cardan-type Polynomials
 	
 	public Polynom GetConjRoot(final int nOrder, final int iRoot) {
 		// p
@@ -164,6 +183,7 @@ public class BaseFactory {
 		return vRoots;
 	}
 	public Vector<Polynom> GetConjRootFactors(final int nOrder) {
+		// P = x - p*m^j - q*m^(n - j);
 		final Vector<Polynom> vRoots = this.GetConjRoots(nOrder);
 		final Monom mX = new Monom("x", 1);
 		
@@ -171,6 +191,26 @@ public class BaseFactory {
 			final Polynom p = math.MultInPlace(vRoots.get(n), -1);
 			p.Add(new Monom(mX), 1);
 			vRoots.set(n, p); // should be already changed in place
+		}
+		
+		return vRoots;
+	}
+	public Vector<Polynom> GetConjRootFactors_2(final int nOrder) {
+		// P = (x - p*m^j - q*m^(n - j)) * (x - p*m^(n - j) - q*m^j);
+		final Vector<Polynom> vRoots = new Vector<Polynom> ();
+		
+		final Vector<Polynom> vPolyRoots = this.GetConjRootFactors(nOrder);
+		// TODO: nOrder == EVEN;
+		final int nLen = nOrder / 2;
+		// simple Root
+		vRoots.add(vPolyRoots.get(0));
+		
+		for(int n=1; n <= nLen; n++) {
+			final Polynom p =
+					math.Replace(
+							math.Mult(vPolyRoots.get(n), vPolyRoots.get(nOrder - n)),
+							ROOT_UNITY, nOrder, 1);
+			vRoots.add(p);
 		}
 		
 		return vRoots;
@@ -191,7 +231,15 @@ public class BaseFactory {
 	}
 	
 	public Polynom BuildFractionConj(final int nOrder) {
-		final Vector<Polynom> vTerms = this.GetConjRootFactors(nOrder);
+		// +++ simple Terms
+		// final Vector<Polynom> vTerms = this.GetConjRootFactors(nOrder);
+		// +++ conjugate Terms
+		final Vector<Polynom> vTerms = this.GetConjRootFactors_2(nOrder);
+		
+		final boolean IS_CONJ = true;
+		if(IS_CONJ) {
+			return this.BuildFractionConj(vTerms, nOrder);
+		}
 		final String sCoeff = "a";
 		
 		final Polynom pSum = new Polynom();
@@ -205,6 +253,32 @@ public class BaseFactory {
 					math.Replace(
 							math.Mult(
 									this.MultTerms(vTerms, n), mCoeff),
+							mReduce, "c"),
+							ROOT_UNITY, nOrder, 1);
+			math.AddInPlace(pSum, pFraction);
+		}
+		
+		final PowGrade grade = new PowGrade(nOrder, 1);
+		return math.ReplaceSeq(
+				math.ReplaceSeq(pSum, ROOT_UNITY, grade), ROOT_UNITY, grade);
+	}
+	public Polynom BuildFractionConj(final Vector<Polynom> vTerms, final int nOrder) {
+		final String sB1 = "a";
+		final String sB0 = "b";
+		
+		final Polynom pSum = new Polynom();
+		
+		final Monom mReduce = new Monom("p", 1).Add("q", 1);
+		final Monom mCoeff0 = new Monom(sB0 + 0, 1);
+		final Polynom pCoeff0 = new Polynom(mCoeff0, 1, "x");
+		
+		for(int n=0; n < vTerms.size(); n++) {
+			final Polynom pF = (n > 0) ? SimpleP1(sB1 + n, sB0 + n) : pCoeff0;
+			final Polynom pFraction =
+					math.Replace(
+					math.Replace(
+							math.Mult(
+									this.MultTerms(vTerms, n), pF),
 							mReduce, "c"),
 							ROOT_UNITY, nOrder, 1);
 			math.AddInPlace(pSum, pFraction);

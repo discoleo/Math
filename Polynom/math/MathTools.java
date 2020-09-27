@@ -22,6 +22,27 @@ public class MathTools {
 	
 	// ++++ Polynom helper Functions ++++
 	
+	public int MaxPow(final Polynom p, final String sVar) {
+		if(p.sRootName.equals(sVar) && p.IsSortedByPrimary()) {
+			// TODO: verify that it is the last key
+			final Integer iPow = p.lastKey().get(p.sRootName);
+			if(iPow != null) {
+				return iPow;
+			}
+		}
+		return -1;
+	}
+	public Polynom Leading(final Polynom p, final String sVar) {
+		if(p.sRootName.equals(sVar) && p.IsSortedByPrimary()) {
+			// TODO: verify that it is the last key
+			final Map.Entry<Monom, Double> mLast = p.lastEntry();
+			if(mLast != null) {
+				return new Polynom(sVar).Add(mLast.getKey(), mLast.getValue());
+			}
+		}
+		return null;
+	}
+	
 	// +++ Multiply Polynomial with a Scalar
 	public Polynom Mult(final Polynom p1, final int iMult) {
 		return this.Mult(p1, iMult, 1);
@@ -37,17 +58,19 @@ public class MathTools {
 		return p1;
 	}
 	public Polynom Mult(final Polynom p1, final int iM, final int iD) {
-		// multiplicare si diviziune polinom cu o valoare numerica;
-		// de fapt vom procesa doar coeficientii;
-		// TODO:
-		// final Polynom pM = new Polynom();
-		// TODO: iM == 0
+		// polynomial multiplication and division with a scalar;
+		// use MultInPlace() for in-place multiplication;
+		final Polynom pM = new Polynom(p1.sRootName);
+		if(iM == 0) {
+			return pM;
+		}
 		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
 			final double dRez = entry.getValue() * iM / iD;
-			p1.put(entry.getKey(), dRez);
+			pM.put(entry.getKey(), dRez);
 		}
-		return p1;
+		return pM;
 	}
+	// +++ Multiply Polynomial with a Monome
 	public Polynom MultInPlace(final Polynom p1, final int iM) {
 		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
 			final double dRez = entry.getValue() * iM;
@@ -142,6 +165,110 @@ public class MathTools {
 		}
 		return mRez;
 	}
+	public Monom DivAbs(final Monom m1, final Monom m2) {
+		// m2 *MUST* divide m1;
+		final Monom mRez = new Monom(m1);
+		if(m2.size() == 0) {
+			return mRez;
+		}
+		for(final Map.Entry<String, Integer> entryM2 : m2.entrySet()) {
+			final Integer iPow1 = m1.get(entryM2.getKey());
+			if(iPow1 == null) {
+				// Error
+				return null;
+			} else {
+				final int iPowRez = iPow1 - entryM2.getValue();
+				if(iPowRez == 0) {
+					mRez.remove(entryM2.getKey());
+				} else if(iPowRez > 0) {
+					mRez.Put(entryM2.getKey(), iPowRez);
+				} else {
+					return null;
+				}
+			}
+		}
+		return mRez;
+	}
+	public Pair<Polynom, Polynom> Div(final Polynom p1, final Polynom pDiv) {
+		// "agile" implementation of a very simple division
+		Polynom pRemain = new Polynom(p1, pDiv.sRootName);
+		Polynom pRez = new Polynom(p1.sRootName);
+		
+		final Map.Entry<Monom, Double> entryDiv = pDiv.lastEntry();
+		final Monom mDiv = entryDiv.getKey(); // top Monom
+		final double dDiv = entryDiv.getValue();
+		
+		while(pRemain.size() > 0) {
+			final Map.Entry<Monom, Double> entryP = pRemain.lastEntry();
+			Monom mTop = entryP.getKey();
+			mTop = this.DivAbs(mTop, mDiv);
+			if(mTop == null) {
+				System.out.println("Error: NOT divisible!");
+				return new Pair<> (pRez, pRemain); // TODO: more advanced
+			}
+			final double dVal = entryP.getValue() / dDiv;
+			pRemain = this.Add(pRemain, this.MultInPlace(this.Mult(pDiv, mTop), -dVal, 1.0d));
+			pRez.Add(mTop, dVal);
+		}
+		return new Pair<> (pRez, pRemain);
+	}
+
+	public Polynom DivExact(final Polynom p1, final Polynom pDiv, final String sR) {
+		// used for elementary Polynomials
+		// TODO: implement robust method;
+		Polynom pR = null;
+		for(final Map.Entry<Monom, Double> entryP : pDiv.entrySet()) {
+			final Polynom pRDiv = DivExact(p1, entryP.getKey());
+			if(pRDiv.size() == 0) { return null; }
+			if(pR == null) {
+				pR = pRDiv;
+			} else {
+				if( ! pR.equals(pRDiv)) {
+					System.out.println("Div Exact: different; NOT yet implemented!"); 
+					return null; // TODO: NOT yet supported
+				}
+			}
+		}
+		if(pR != null) {
+			final Monom mR = new Monom(sR, 1);
+			final Polynom pReplace = this.Mult(pR, mR);
+			return this.Add(
+					this.Add(p1, this.Mult(this.MultInPlace(pR, -1), pDiv)), pReplace);
+		}
+		return pR;
+	}
+	public Polynom DivExact(final Polynom p1, final Monom mDiv) {
+		// used for elementary Polynomials + other uses;
+		Polynom pR = new Polynom(p1.sRootName);
+		for(final Map.Entry<Monom, Double> entryP : p1.entrySet()) {
+			final Monom mRDiv = DivExact(entryP.getKey(), mDiv);
+			if(mRDiv == null) { continue; }
+			pR.Add(mRDiv, entryP.getValue());
+		}
+		return pR;
+	}
+	public Monom DivExact(final Monom m1, final Monom m2) {
+		// exact Division: same Power!
+		// used for elementary Polynomials
+		if(m2.size() == 0) {
+			return null;
+		}
+		final Monom mRez = new Monom(m1);
+		for(final Map.Entry<String, Integer> entryM2 : m2.entrySet()) {
+			final Integer iPow1 = m1.get(entryM2.getKey());
+			if(iPow1 == null) {
+				return null;
+			} else {
+				final int iPowRez = iPow1 - entryM2.getValue();
+				if(iPowRez == 0) {
+					mRez.remove(entryM2.getKey());
+				} else {
+					return null;
+				}
+			}
+		}
+		return mRez;
+	}
 	
 	public Monom Div(final Monom m1, final String sVarName, final int iPow) {
 		final Monom mRez = new Monom(m1);
@@ -162,6 +289,43 @@ public class MathTools {
 		}
 		return mRez;
 	}
+	
+	public Polynom Gcd(final Polynom p1, final Polynom p2) {
+		// TODO:
+		// only simple polynomials: 1 Variable
+		final String sVarName = p2.sRootName;
+		final Polynom pLeading = this.Leading(p2, sVarName);
+		final int iMaxPow = this.MaxPow(p2, sVarName);
+		System.out.println("Max Pow = " + iMaxPow);
+		Polynom p = new Polynom(p1);
+		final Polynom pDiv = new Polynom(sVarName);
+		
+		// Iterator<Map.Entry<Monom, Double>> it = p.descendingMap().entrySet().iterator();
+		Map.Entry<Monom, Double> entry = p.descendingMap().firstEntry();
+		while(entry != null) {
+			System.out.println(entry.getKey().toString());
+			
+			final Integer iPow = entry.getKey().get(sVarName);
+			if(iPow == null || iPow < iMaxPow) {
+				break; // all Monoms are lower order
+			}
+			// TODO: verify (divide by pLeading!)
+			final Monom mDiv = this.Div(entry.getKey(), pLeading.firstKey());
+			final double dDivCoeff = entry.getValue() / pLeading.firstEntry().getValue();
+			if(dDivCoeff == 0) { continue; }
+			pDiv.Add(mDiv, dDivCoeff);
+			p = this.Add(p,
+					this.Mult(p2, mDiv, - dDivCoeff));
+			entry = p.descendingMap().firstEntry();
+		}
+		if(p.size() != 0) {
+			System.out.println("Error in GCD:\n" + p.toString());
+		}
+		
+		return pDiv;
+	}
+	
+	// ++++ Add ++++
 	
 	public Polynom Add(final Polynom p, final Monom m, final double dCoeff) {
 		// "in place" addition
@@ -320,6 +484,7 @@ public class MathTools {
 	
 	// +++ Select Subsequence +++
 	public Polynom SubSequence(final Polynom p, final String sVarName, final int iPow) {
+		// extract all Monomes containing sVarName at power iPow;
 		final String sRootName = p.sRootName;
 		final Polynom polyRez =  new Polynom(sRootName);
 		
@@ -340,6 +505,7 @@ public class MathTools {
 		final int [] iPowSeq = new int [nOrder];
 		
 		for(int nPow = nOrder - 1; nPow >= 0; nPow--) {
+			// extract Monomes containing sVarName
 			final Polynom p1Sub = Replace(SubSequence(p1, sVarName, nPow), sVarName, 1, 1);
 			final Polynom p2Sub = Replace(SubSequence(p2, sVarName, nPow), sVarName, 1, 1);
 			// System.out.println("x Power: " + nPow);
@@ -481,6 +647,37 @@ public class MathTools {
 		
 		return polyRez;
 	}
+	public Polynom ReplaceOrMult(final Polynom p, final String sVarName,
+			final Polynom pW, final Polynom pMult, final int maxPow) {
+		// Replaces with pW vs multiplies with pMult
+		// pW^k1 * pMult^k2, with k1 + k2 = maxPow;
+		final Vector<Polynom> vPolyPow = this.PowAll(pW, maxPow); // powers
+		final Vector<Polynom> vMultPow = this.PowAll(pMult, maxPow); // powers
+
+		final String sRootName = p.sRootName;
+		Polynom polyRez =  new Polynom(sRootName);
+		
+		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+			final Integer nPow = entryM.getKey().get(sVarName);
+			if(nPow == null) {
+				final Polynom pAdd =
+						this.MultInPlace(
+						this.Mult(vMultPow.lastElement(), entryM.getKey()), entryM.getValue(), 1.0d);
+				polyRez = this.Add(polyRez, pAdd);
+				continue;
+			}
+			final Monom mRemaining = new Monom(entryM.getKey());
+			mRemaining.remove(sVarName);
+			// Multiply with Coeff
+			final Polynom polyTerm =
+					this.Mult(vMultPow.get(maxPow - nPow), // pos(0) == 1
+					this.Mult(vPolyPow.get(nPow),
+							new Polynom(mRemaining, entryM.getValue(), sRootName)));
+			polyRez = this.Add(polyRez, polyTerm);
+		}
+		
+		return polyRez;
+	}
 	
 	// +++ Replace: sum(var^i) with dVal
 	public Polynom ReplaceSeq(final Polynom pOriginal, final String sVarName, final PowGrade powGrade) {
@@ -586,6 +783,7 @@ public class MathTools {
 			final Polynom pModify = this.Mult(pairUnity.key, mBase);
 			final double dCoeff = - this.HasSeq(pOriginal, pModify);
 			System.out.println(pModify.toString() + ": " + dCoeff);
+			
 			if(dCoeff == 0) { break; }
 			
 			final Polynom pModifyCoeff =
@@ -705,7 +903,7 @@ public class MathTools {
 			final String sSubSeqName, final PowGrade powGrade) {
 		// matches the SubSeq and computes the minimal matching Coeffs
 		// the Coeffs are inverted;
-		final int MAX_MISSING = 2;
+		final int MAX_MISSING = (powGrade.iPow == 15 || powGrade.iPow == 25) ? 4 : 2; // TODO
 		final int lenMin = pSubSeq.size() - MAX_MISSING;
 		final Polynom pRez = new Polynom(pMonoms.sRootName);
 		final Polynom pNew = new Polynom(pMonoms.sRootName);
@@ -937,6 +1135,39 @@ public class MathTools {
 		}
 		// System.out.println("" + iPow + ": " + dAcc * dValPow);
 		return dAcc * dValPow;
+	}
+	public Polynom Pow(final Polynom p, final int iPow) {
+		if(iPow == 1) {
+			return new Polynom(p); // copy of original!
+		}
+		Polynom pAcc = new Polynom(1, p.sRootName);
+		Polynom pValPow = new Polynom(p);
+		for(int iPowA = iPow; iPowA > 0; ) {
+			if(iPowA == 1) {
+				iPowA --;
+			} else if(iPowA % 2 == 1) {
+				pAcc = this.Mult(pAcc, pValPow);
+				iPowA --;
+			} else {
+				pValPow = this.Mult(pValPow, pValPow);
+				iPowA /= 2;
+			}
+		}
+		// System.out.println("" + iPow + ": " + dAcc * dValPow);
+		return this.Mult(pValPow, pAcc);
+	}
+	public Vector<Polynom> PowAll(final Polynom p, final int iPow) {
+		// ALL powers: pos(0) == 1; (simplifies code in various functions)
+		final Vector<Polynom> vP = new Vector<> (iPow);
+		vP.add(new Polynom(1, p.sRootName));
+		vP.add(new Polynom(p));
+		if(iPow == 1) {
+			return vP; // copy of original!
+		}
+		for(int i = 2; i <= iPow; i++) {
+			vP.add(this.Mult(vP.lastElement(), p));
+		}
+		return vP;
 	}
 	
 	public double CommonCoefficient(final double [] dCoeffs, final int lenMin) {

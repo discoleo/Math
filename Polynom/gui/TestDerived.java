@@ -5,6 +5,7 @@ import data.Pair;
 import data.PolyResult;
 import data.Polynom;
 import io.Parser;
+import math.ElementaryPoly;
 import math.MathTools;
 import math.PolyFactory;
 
@@ -325,6 +326,7 @@ public class TestDerived {
 		display.Display("\nE: ^3");
 		final String sX = "x";
 		
+		// TODO: use ElementaryPoly class
 		final Polynom pE1 = parser.Parse("x + y + z", sX);
 		final Polynom pE12 = parser.Parse("x^2 + y^2 + z^2", sX);
 		final Polynom pE13 = parser.Parse("x^3 + y^3 + z^3", sX);
@@ -364,6 +366,8 @@ public class TestDerived {
 		display.Display(pairDiv.key);
 	}
 	
+	// +++ S3 hetero-symmetric Systems +++
+	
 	public void S3X2() {
 		display.Display("\nS3: x^2 + b1*y + b2*z");
 		final String sX = "x";
@@ -390,14 +394,19 @@ public class TestDerived {
 		display.Display(polyFact.ToSeq(pairDiv.key, sX));
 		display.Display(pairDiv.val);
 	}
-	
+
 	public void S3X2Ext() {
-		display.Display("\nS3: Extension for x^2 + b1*y + b2*z");
+		this.S3X2Ext(2, 4, true);
+		// this.S3X2Ext(3, 6, false);
+	}
+	public void S3X2Ext(final int nPow, final int nPowE, final boolean addXYZ) {
+		display.Display("\nS3: Extension for x^" + nPow + " + b1*y + b2*z");
 		final String sX = "x";
+		final String sXYZ = addXYZ ? "+ b3*x*y*z" : "";
 		
-		final Polynom pB1 = math.Pow(parser.Parse("x^2 + s*x + b3*x*y*z + b1*y + b1*z", sX), 2);
-		final Polynom pB2 = math.Pow(parser.Parse("y^2 + s*y + b3*x*y*z + b1*x + b1*z", sX), 2);
-		final Polynom pB3 = math.Pow(parser.Parse("z^2 + s*z + b3*x*y*z + b1*x + b1*y", sX), 2);
+		final Polynom pB1 = math.Pow(parser.Parse("x^" + nPow + " + s*x " + sXYZ + " + b1*y + b1*z", sX), 2);
+		final Polynom pB2 = math.Pow(parser.Parse("y^" + nPow + " + s*y " + sXYZ + " + b1*x + b1*z", sX), 2);
+		final Polynom pB3 = math.Pow(parser.Parse("z^" + nPow + " + s*z " + sXYZ + " + b1*x + b1*y", sX), 2);
 		Polynom pR = math.Add(math.Add(pB1, pB2), pB3);
 		
 		final Polynom pX = math.Mult(math.Pow(parser.Parse("R + b1*x - b2*x", sX), 2), -1);
@@ -407,10 +416,15 @@ public class TestDerived {
 		pR = math.Add(math.Add(math.Add(pR, pX), pY), pZ);
 		//
 		final ElementaryPoly elementary = EPolyFactory();
+		elementary.BuildE(nPowE);
 		
 		// decompose in Elementary Polynomials
-		pR = elementary.EncodeEV3(pR);
+		pR = elementary.EncodeEV3(pR, nPowE);
 		pR = elementary.ReplaceEV3(pR);
+		// +++ Debug
+		display.Display("Debug S3 Elementary");
+		display.Display(pR);
+		display.Display("END Debug S3 Elementary\n");
 		
 		final Polynom pE2 = math.Mult(parser.Parse("S^2 + s*S+b1*S+b2*S + 3*b3*E3 - 3*R", "S"), 1, 2);
 		pR = math.Mult(pR, 2);
@@ -429,79 +443,5 @@ public class TestDerived {
 	
 	public ElementaryPoly EPolyFactory() {
 		return new ElementaryPoly(parser, math);
-	}
-	
-	// ++++ helper Classes ++++
-	
-	public static class ElementaryPoly {
-		final MathTools math;
-		final Parser parser;
-		
-		final String sX = "x";
-		final String sS = "S"; // E1
-		
-		final Monom mE3 = new Monom("x", 1).Add("y", 1).Add("z", 1);
-		final Polynom pE1_4;
-		final Polynom pE1_3;
-		final Polynom pE1_2;
-		final Polynom pE1;
-		final Polynom pE2c1;
-		final Polynom pE2;
-		
-		public ElementaryPoly(final Parser parser, final MathTools math) {
-			this.parser = parser;
-			this.math = math;
-			pE1_4 = parser.Parse("x^4+y^4+z^4", sX);
-			pE1_3 = parser.Parse("x^3+y^3+z^3", sX);
-			pE1_2 = parser.Parse("x^2+y^2+z^2", sX);
-			pE1 = parser.Parse("x+y+z", sX);
-			pE2c1 = parser.Parse("x^2*y+x^2*z+y^2*x+y^2*z+z^2*x+z^2*y", sX);
-			pE2 = parser.Parse("x*y+x*z+y*z", sX);
-		}
-		
-		public Polynom EncodeEV3(final Polynom p) {
-			Polynom pE = math.Replace(p, mE3, "E3");
-			// E1^4
-			Polynom pRE = math.DivExact(pE, pE1_4, "E1_4");
-			if(pRE != null) {
-				pE = pRE;
-			}
-			// E1^3
-			pRE = math.DivExact(pE, pE1_3, "E1_3");
-			if(pRE != null) {
-				pE = pRE;
-			}
-			// x^2*y
-			pRE = math.DivExact(pE, pE2c1, "E2c1");
-			if(pRE != null) {
-				pE = pRE;
-			}
-			// E1^2
-			pRE = math.DivExact(pE, pE1_2, "E1_2");
-			if(pRE != null) {
-				pE = pRE;
-			}
-			// E2
-			pRE = math.DivExact(pE, pE2, "E2");
-			if(pRE != null) {
-				pE = pRE;
-			}
-			// E1
-			pRE = math.DivExact(pE, pE1, sS);
-			if(pRE != null) {
-				pE = pRE;
-			}
-			
-			return pE;
-		}
-		public Polynom ReplaceEV3(final Polynom p) {
-			Polynom pR = math.Replace(p, "E1_2", parser.Parse(sS + "^2 - 2*E2", sS));
-			pR = math.Replace(pR, "E1_3", parser.Parse(sS + "^3 - 3*E2*" + sS + "+3*E3", sS));
-			pR = math.Replace(pR, "E1_4", parser.Parse(sS + "^4 - 4*E2*" + sS + "^2 + 4*E3*" + sS + " + 2*E2^2", sS));
-			// E2...
-			pR = math.Replace(pR, "E2c1", parser.Parse(sS + "*E2 - 3*E3", sS));
-			
-			return pR;
-		}
 	}
 }

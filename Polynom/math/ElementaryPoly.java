@@ -11,25 +11,41 @@ public class ElementaryPoly {
 	final Parser parser;
 	
 	final String sX = "x";
-	final String sS = "S"; // E1
+	final String sS = "S"; // E1 Variable Name
+	final Polynom pS; // E1 Replacement
 	
+	// E internal Replacement
+	final Vector<Monom> vMER = new Vector<> ();
 	// E3
 	final Monom mE3;
 	// E1
-	final Vector<Polynom> vPE1;
+	final Vector<Polynom> vPE1 = new Vector<> ();
+	final Vector<Polynom> vPR1 = new Vector<> ();
 	// E2
-	final Vector<Polynom> vPE2;
+	final Vector<Polynom> vPE2 = new Vector<> ();
 	
 	
 	public ElementaryPoly(final Parser parser, final MathTools math) {
 		this.parser = parser;
 		this.math = math;
+		// S
+		pS = parser.Parse(sS, sS);
+		// E internal Replacement
+		vMER.add(new Monom(sS, 1));
+		vMER.add(new Monom("E2", 1));
+		vMER.add(new Monom("E3", 1));
 		// E3
 		mE3 = new Monom("x", 1).Add("y", 1).Add("z", 1);
-		// E1
-		vPE1 = new Vector<> ();
-		// E2
-		vPE2 = new Vector<> ();
+		//
+		BuildR1(3);
+	}
+	
+	// ++++++++++ MEMBER FUNCTIONS ++++++++++++
+	
+	public void Print(final Vector<Polynom> pTest) {
+		for(final Polynom p : pTest) {
+			System.out.println(p.toString());
+		}
 	}
 	
 	// +++ Build the symmetric Polynomials
@@ -37,6 +53,7 @@ public class ElementaryPoly {
 	public void BuildE(final int nPow) {
 		this.BuildE1(nPow);
 		this.BuildE2(nPow);
+		this.BuildR1(nPow);
 	}
 	public Vector<Polynom> BuildE1(final int nPow) {
 		for(int n= vPE1.size() + 1; n <= nPow; n++) {
@@ -77,6 +94,34 @@ public class ElementaryPoly {
 		return vPE1;
 	}
 	
+	// +++ Build Replacements +++
+
+	public Vector<Polynom> BuildR1(final int nPow) {
+		// optimization for the "Bases"
+		if(vPR1.size() < 3) {
+			if(vPR1.size() == 0) {
+				vPR1.add(pS);
+			}
+			if(vPR1.size() == 1) {
+				vPR1.add(parser.Parse(pS + "^2 - 2*E2", sS));
+			}
+			if(vPR1.size() == 2) {
+				vPR1.add(parser.Parse(pS + "^3 - 3*E2*" + sS + "+3*E3", sS));
+			}
+		}
+		// remaining cases
+		for(int n = vPR1.size(); n < nPow; n++) {
+			Polynom pR1 = math.Mult(vPR1.get(n - 1), vMER.get(0));
+			pR1 = math.Diff(pR1, math.Mult(vPR1.get(n - 2), vMER.get(1)));
+			pR1 = math.Add(pR1, math.Mult(vPR1.get(n - 3), vMER.get(2)));
+			vPR1.add(pR1);
+		}
+		
+		return vPR1;
+	}
+	
+	// +++ Encode +++
+	
 	public Polynom EncodeE1(final Polynom p, final int nPow) {
 		final String sReplace = (nPow > 1) ? "E1_" + nPow : sS;
 		final Polynom pRE = math.DivExact(p, vPE1.get(nPow - 1), sReplace);
@@ -112,14 +157,11 @@ public class ElementaryPoly {
 		
 		return pE;
 	}
-	public Polynom ReplaceEV3(final Polynom p) {
-		// TODO: derive the decompositions;
-		Polynom pR = math.Replace(p, "E1_2", parser.Parse(sS + "^2 - 2*E2", sS));
-		pR = math.Replace(pR, "E1_3", parser.Parse(sS + "^3 - 3*E2*" + sS + "+3*E3", sS));
-		pR = math.Replace(pR, "E1_4", parser.Parse(sS + "^4 - 4*E2*" + sS + "^2 + 4*E3*" + sS + " + 2*E2^2", sS));
-		pR = math.Replace(pR, "E1_5", parser.Parse(sS + "^5 - 5*E2*" + sS + "^3 + 5*E3*" + sS + "^2 +"
-				+ "5*E2^2*" + sS + "- 5*E3*E2", sS));
-		// TODO: E1_6!
+	public Polynom ReplaceEV3(final Polynom p, final int nPow) {
+		Polynom pR = math.Replace(p, "E1_2", vPR1.get(1));
+		for(int iPow = 2; iPow < nPow; iPow++) {
+			pR = math.Replace(pR, "E1_" + (iPow+1), vPR1.get(iPow));
+		}
 		// E2...
 		pR = math.Replace(pR, "E2c1", parser.Parse(sS + "*E2 - 3*E3", sS));
 		pR = math.Replace(pR, "E2c2", parser.Parse("E2^2 - 2*E3*" + sS, sS));

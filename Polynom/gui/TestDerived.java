@@ -420,12 +420,13 @@ public class TestDerived {
 		
 		// decompose in Elementary Polynomials
 		pR = elementary.EncodeEV3(pR, nPowE);
-		pR = elementary.ReplaceEV3(pR);
+		pR = elementary.ReplaceEV3(pR, nPowE);
 		// +++ Debug
 		display.Display("Debug S3 Elementary");
 		display.Display(pR);
 		display.Display("END Debug S3 Elementary\n");
 		
+		// TODO: higher powers
 		final Polynom pE2 = math.Mult(parser.Parse("S^2 + s*S+b1*S+b2*S + 3*b3*E3 - 3*R", "S"), 1, 2);
 		pR = math.Mult(pR, 2);
 		pR = math.Replace(pR, "E2", pE2);

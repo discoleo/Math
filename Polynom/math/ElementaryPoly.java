@@ -1,8 +1,11 @@
 package math;
 
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import data.Monom;
+import data.Pair;
 import data.Polynom;
 import io.Parser;
 
@@ -22,7 +25,8 @@ public class ElementaryPoly {
 	final Vector<Polynom> vPE1 = new Vector<> ();
 	final Vector<Polynom> vPR1 = new Vector<> ();
 	// E2
-	final Vector<Polynom> vPE2 = new Vector<> ();
+	final Vector<Pair<Polynom, String>> vPE2 = new Vector<> ();
+	final TreeMap<String, Polynom> mapPR2 = new TreeMap<> ();
 	
 	
 	public ElementaryPoly(final Parser parser, final MathTools math) {
@@ -38,6 +42,7 @@ public class ElementaryPoly {
 		mE3 = new Monom("x", 1).Add("y", 1).Add("z", 1);
 		//
 		BuildR1(3);
+		TestE2(8);
 	}
 	
 	// ++++++++++ MEMBER FUNCTIONS ++++++++++++
@@ -47,6 +52,16 @@ public class ElementaryPoly {
 			System.out.println(p.toString());
 		}
 	}
+	public void Print(final TreeMap<String, Polynom> mapTest) {
+		for(final Map.Entry<String, Polynom> entry : mapTest.entrySet()) {
+			System.out.println(entry.getKey() + ": " + entry.getValue().toString());
+		}
+	}
+	public void TestE2(final int iPow) {
+		// TODO: Verify if CORRECT!
+		this.BuildE(iPow);
+		this.Print(mapPR2);
+	}
 	
 	// +++ Build the symmetric Polynomials
 	// +++ derived from the Elementary Polynomials
@@ -54,6 +69,7 @@ public class ElementaryPoly {
 		this.BuildE1(nPow);
 		this.BuildE2(nPow);
 		this.BuildR1(nPow);
+		this.BuildR2(nPow - 2);
 	}
 	public Vector<Polynom> BuildE1(final int nPow) {
 		for(int n= vPE1.size() + 1; n <= nPow; n++) {
@@ -67,7 +83,7 @@ public class ElementaryPoly {
 	
 	public Vector<Polynom> BuildE2(final int nPowTotal) {
 		if(vPE2.size() == 0) {
-			vPE2.add(parser.Parse("x*y+x*z+y*z", sX));
+			vPE2.add(new Pair<>(parser.Parse("x*y+x*z+y*z", sX), "E2"));
 		}
 		// TODO: correct / optimal sequence ?
 		for(int nTotal = vPE2.size() + 2; nTotal <= nPowTotal; nTotal++) {
@@ -87,7 +103,7 @@ public class ElementaryPoly {
 							"+z^" + n1 + "*y^" + n2;
 				}
 				final Polynom pE2 = parser.Parse(sP, sX);
-				vPE2.add(pE2);
+				vPE2.add(new Pair<>(pE2, "E2c_" + n1 + "_" + n2));
 			}
 		}
 		
@@ -120,6 +136,81 @@ public class ElementaryPoly {
 		return vPR1;
 	}
 	
+	public TreeMap<String, Polynom> BuildR2(final int nPow) {
+		// fast Version for 3 Variables
+		if(mapPR2.size() == 0) {
+			mapPR2.put("E2", new Polynom(vMER.get(1), 1, sS));
+		}
+		for(int p1 = 2; p1 <= nPow; p1++) {
+			for(int p2 = 1; p2 <= p1; p2++) {
+				// x^p1 * y^p2
+				// just for Test
+				if(p2 >= 5 || p1 > 5) { continue; }
+				
+				final int idP = (p1 - 1)*p1/2 + p2 - 1; // Vector[0]: offset = -1;
+				if(mapPR2.size() > idP) { continue; }
+				final int diffPow = p1 - p2;
+				System.out.println("p1 = " + p1 + "; p2 = " + p2);
+				if(diffPow == 0) {
+					// sum(x^p1 * y^p1) = (E2)^p1 - (...);
+					Polynom pE2Pow = math.Pow(vPE2.get(0).key, p1);
+					pE2Pow = EncodeE3V3(pE2Pow);
+					pE2Pow = math.Diff(pE2Pow, vPE2.get(this.GetIdE2(p1, p2)).key);
+					System.out.println("After encoding: " + pE2Pow.toString());
+					// computes automatically
+					pE2Pow = this.EncodeEV3(pE2Pow, p1 + p2 - 1);
+					pE2Pow = math.Diff(this.E2Pow(p1), pE2Pow);
+					pE2Pow = this.ReplaceEV3(pE2Pow, p1 + p2 - 1);
+					System.out.println("After encoding: " + pE2Pow.toString());
+					mapPR2.put("E2c_" + p1 +"_" + p2, pE2Pow);
+				} else {
+					// sum(x^diffPow) * sum((x*y)^p2) - (...);
+					final String sE2xy = this.GetE2Name(p2, p2);
+					Polynom pE2Pow = math.Mult(vPR1.get(diffPow - 1), mapPR2.get(sE2xy));
+					System.out.println("After encoding: " + pE2Pow.toString());
+					if(diffPow == p2) {
+						pE2Pow = math.Diff(pE2Pow, this.E3Pow(p2, 3));
+					} else if(diffPow > p2) {
+						final int idE1 = diffPow - p2 - 1; // Vector[id]: offset - 1;
+						final Polynom pDiff = math.Mult(vPR1.get(idE1), this.E3Pow(p2, 1));
+						pE2Pow = math.Diff(pE2Pow, pDiff);
+					} else {
+						final int idE2 = p2 - diffPow;
+						final Polynom pDiff = math.Mult(this.GetE2(idE2, idE2), this.E3Pow(diffPow, 1));
+						pE2Pow = math.Diff(pE2Pow, pDiff);
+					}
+					mapPR2.put("E2c_" + p1 +"_" + p2, pE2Pow);
+				}
+			}
+		}
+		
+		return mapPR2;
+	}
+	
+	public int GetIdE2(final int p1, final int p2) {
+		// based on the complicated layout
+		final int iRowD = p1 + p2 - 1;
+		final int iRow = iRowD / 2;
+		return iRow*(iRow + 1) + p2 - 1 - ((iRowD % 2 == 0) ? iRow : 0);
+	}
+	
+	public String GetE2Name(final int p1, final int p2) {
+		return vPE2.get(0).val + (p1 == 1 ? "" : "c_" + p1 + "_" + p2);
+	}
+	public Polynom GetE2(final int p1, final int p2) {
+		final String sE2 = GetE2Name(p1, p2);
+		return mapPR2.get(sE2);
+	}
+	
+	public Polynom E2Pow(final int iPow) {
+		// E2^iPow
+		return new Polynom(new Monom(vPE2.get(0).val, iPow), 1, sS);
+	}
+	public Polynom E3Pow(final int iPow, final double dCoeff) {
+		// E2^iPow
+		return new Polynom(new Monom("E3", iPow), dCoeff, sS);
+	}
+	
 	// +++ Encode +++
 	
 	public Polynom EncodeE1(final Polynom p, final int nPow) {
@@ -129,16 +220,20 @@ public class ElementaryPoly {
 	}
 	
 	public Polynom EncodeE2(final Polynom p, final int nPow) {
-		// vE2: 0: E2; 1: x^2y; 2: x^2y^2; 3: x^3y;
+		// vE2:: 0: E2; 1: x^2y; 2: x^2y^2; 3: x^3y;
 		if(nPow < 2) { return null; }
-		final String sReplace = (nPow > 2) ? "E2c" + (nPow - 2) : "E2";
-		final Polynom pRE = math.DivExact(p, vPE2.get(nPow - 2), sReplace);
+		final Pair<Polynom, String> pairP = vPE2.get(nPow - 2);
+		final String sReplace = pairP.val;
+		final Polynom pRE = math.DivExact(p, pairP.key, sReplace);
 		return pRE;
 	}
 	
+	public Polynom EncodeE3V3(final Polynom p) {
+		return math.Replace(p, mE3, "E3");
+	}
 	public Polynom EncodeEV3(final Polynom p, final int nPow) {
 		// E3
-		Polynom pE = math.Replace(p, mE3, "E3");
+		Polynom pE = EncodeE3V3(p);
 		// E1 & E2:
 		Polynom pRE = null;
 		// E1^4
@@ -163,8 +258,8 @@ public class ElementaryPoly {
 			pR = math.Replace(pR, "E1_" + (iPow+1), vPR1.get(iPow));
 		}
 		// E2...
-		pR = math.Replace(pR, "E2c1", parser.Parse(sS + "*E2 - 3*E3", sS));
-		pR = math.Replace(pR, "E2c2", parser.Parse("E2^2 - 2*E3*" + sS, sS));
+		pR = math.Replace(pR, "E2c_2_2", parser.Parse("E2^2 - 2*E3*" + sS, sS));
+		pR = math.Replace(pR, "E2c_2_1", parser.Parse(sS + "*E2 - 3*E3", sS));
 		
 		return pR;
 	}

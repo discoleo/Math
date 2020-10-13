@@ -7,13 +7,12 @@ import data.PowGrade;
 
 public class Test extends BaseGui {
 	
+	private TestPolyClass1 testClass1 = new TestPolyClass1(this);
+	
 	// private String sInput = "(x^3 + 3*pr)*((x^3 + 3*pr)^4 - 5*c*(x^3 + 3*pr)^2";
 	
 	private String sInput = "(x^2 - 8*(0.125 x^3 - 3)) + x^3 - 2*s1s2(3*x - 4x) =  0.125*s1s2*x";
 
-	public Polynom Start() {
-		return parser.Parse(sInput, "x");
-	}
 	public void TestPoly() {
 		// this.TestMath();
 		this.TestGeneration();
@@ -21,10 +20,27 @@ public class Test extends BaseGui {
 		// this.TestRootDecomp();
 		this.TestFractionDecomposition();
 		// this.TestRationalization();
-		P5_3();
+		this.P5_3();
 		//
 		new TestDerived(parser, math, polyFact, this).Test();
 		// new TestConj(this).Test();
+		this.ShiftP3();
+	}
+	
+	public Polynom Start() {
+		// Test Parser
+		// TODO: parse brackets;
+		return parser.Parse(sInput, "x");
+	}
+	
+	public void ShiftP3() {
+		final Polynom pBaseShift = parser.Parse("y1 + s1 + s2", "y");
+		final Polynom p1 = parser.Parse(
+				"y^3 - 3*s1*y^2 - 3*s2*y^2 + 3*s1^2*y + 3*s2^2*y + 6*s1*s2*y + 3*b1*y - 3*c*y"
+				+ "+ 6*s1*c - 2*s1^3 - 6*s1*s2^2 - r", "y");
+		Polynom pShift = math.Replace(p1, "y", pBaseShift);
+		pShift = math.Replace(pShift, "y1", new Monom("y",1));
+		super.Display(polyFact.ToSeq(pShift, "y"));
 	}
 	
 	public void P5_3() {
@@ -175,49 +191,29 @@ public class Test extends BaseGui {
 	public void TestGeneration() {
 		// ++++ Roots
 		System.out.println("\nTesting roots:");
+
+		PolyResult pRez = null;
 		// Example 1
-		// final Polynom pR_7 = parser.Parse("k^6 - k^4 + s3*k^3 + s2*k^2 + s1*k", "k");
-		// final Polynom pR_7 = parser.Parse("s^2*k^3 + 2*s*k^2 - 2*k", "k");
-		final Polynom pR_7 = parser.Parse("s*k^4 - s*k^3 + k^2 + k", "k");
-		
-		PolyResult pRez = polyFact.Create(pR_7, 5);
-		Polynom p_test = math.Replace(pRez.GetPoly(), "k", 5, "K");
-		System.out.println(p_test.toString());
-		System.out.println(p_test.size());
-		System.out.println(pRez.toR());
+		Polynom p_test = testClass1.Build("s*k^4 - s*k^3 + k^2 + k", 5);
 		
 		// Example 2
-		final Polynom pR_7s4 = parser.Parse("k^6 + s4*k^4 + s3*k^3 + s2*k^2 + s1*k", "k");
-		pRez = polyFact.Create(pR_7s4, 7);
-		p_test = pRez.GetPoly();
-		System.out.println(p_test.toString());
-		System.out.println(p_test.size());
+		// final Polynom pR_7 = parser.Parse("k^6 - k^4 + s3*k^3 + s2*k^2 + s1*k", "k");
+		// final Polynom pR_7 = parser.Parse("s^2*k^3 + 2*s*k^2 - 2*k", "k");
+		p_test = testClass1.Build("k^6 + s4*k^4 + s3*k^3 + s2*k^2 + s1*k", 7);
 
 		// Example 3: correlated coeffs
-		final Polynom pR_nx3 = parser.Parse("k^4 - 2*s3*k^3 + s3^2*k^2", "k");
-		pRez = polyFact.Create(pR_nx3, 5);
-		p_test = pRez.GetPoly();
-		System.out.println("P5: k^4 - s3*k^3 + s3^2*k^2 + s3^3*k");
-		System.out.println(p_test.toString());
-		System.out.println(p_test.size());
+		p_test = testClass1.Build("k^4 - 2*s3*k^3 + s3^2*k^2", 5);
+		p_test = testClass1.Build("k^4 - s3*k^3 + s3^2*k^2 + s3^3*k", 5);
 
 		// Example 4: much simpler P5
-		final Polynom pR3 = parser.Parse("k^3 - 3*k^2 - 2*k", "k");
-		pRez = polyFact.Create(pR3, 5);
-		p_test = pRez.GetPoly();
-		System.out.println("P5: simple P5");
-		System.out.println(p_test.toString());
-		System.out.println(p_test.size());
-		// Test Ex4( m^3 + v2*m^2 + v1*m )
+		p_test = testClass1.Build("k^3 - 3*k^2 - 2*k", 5);
+		// Test Replace[x]( m^3 + v2*m^2 + v1*m )
 		final Polynom pReplace3 = parser.Parse("m^3 + v2*m^2 + v1*m", "m");
 		p_test = math.Replace(p_test, "x", pReplace3);
 		System.out.println(p_test.toString());
 		System.out.println(p_test.size());
 
-		final Polynom pR3_k = parser.Parse("k^3 + s2*k^2 + s1*k", "k");
-		p_test = polyFact.Create(pR3_k, 5).GetPoly();
-		System.out.println("P5: r = k^3 + s2*k^2 + s1*k");
-		System.out.println(p_test.toString());
+		p_test = testClass1.Build("k^3 + s2*k^2 + s1*k", 5);
 		p_test = math.Replace(p_test, "x", pReplace3);
 		System.out.println("Generic Replacement");
 		System.out.println(p_test.toString());
@@ -229,31 +225,21 @@ public class Test extends BaseGui {
 		System.out.println(p_test.toString());
 		System.out.println(p_test.size());
 		// special k^3
-		final Polynom pR3_ks = parser.Parse("k^3 + s2*k^2 - s2^2*k", "k");
-		p_test = polyFact.Create(pR3_ks, 5).GetPoly();
-		System.out.println("P5 special: r = k^3 + s2*k^2 - s2^2*k");
-		System.out.println(p_test.toString());
+		p_test = testClass1.Build("k^3 + s2*k^2 - s2^2*k", 5);
 		
+		// P(x + y)
+		this.Display("\nP(x, y)");
 		final Polynom pR_xy = new Polynom(0, "x");
 		pR_xy.put(new Monom("x", 1), 1d);
 		pR_xy.put(new Monom("y", 1), 1d);
 		//
-		pR3_k.clear();
-		pR3_k.put(new Monom("k", 3), 1d);
-		pR3_k.put(new Monom("k", 1), -1d);
-		pRez = polyFact.Create(pR3_k, 5);
-		p_test = pRez.GetPoly();
-		System.out.println(p_test.toString());
-		System.out.println(p_test.size());
+		p_test = testClass1.Build("k^3 - k", 5);
 		p_test = math.Replace(p_test, "x", pR_xy);
 		System.out.println(p_test.toString());
 		
 		// Example 5: P5
-		final Polynom pR5 = parser.Parse("-s^2*s*k^4 - s^2*k^3 - s*k^2 + k", "k");
-		pRez = polyFact.Create(pR5, 5, "x");
-		p_test = pRez.GetPoly();
-		System.out.println("\nP5: special");
-		System.out.println(p_test.toString());
+		this.Display("\nP5: special");
+		p_test = testClass1.Build("-s^2*s*k^4 - s^2*k^3 - s*k^2 + k", 5);
 		
 		// Example 5: P5 Cube // k^3 + 3*s*k^2 + 3*s^2*k
 		final Polynom pR5p3 = parser.Parse("k^3 + 3*s*k^2 + 3*s^2*k", "k");

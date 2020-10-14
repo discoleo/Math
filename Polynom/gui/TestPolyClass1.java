@@ -3,11 +3,12 @@ package gui;
 import java.util.Map;
 import java.util.Vector;
 
-import data.Monom;
 import data.Pair;
 import data.PolyResult;
 import data.PolySeq;
 import data.Polynom;
+import math.Derive;
+
 
 public class TestPolyClass1 extends BaseGui {
 	
@@ -72,22 +73,49 @@ public class TestPolyClass1 extends BaseGui {
 		
 		return pRez;
 	}
+
+	// +++ various ODEs +++
 	
+	public Polynom ODETest0() {
+		final String sK = "x-1";
+		return this.ODETest(sK);
+	}
 	public Polynom ODETest() {
-		final String sRoot = "s4*k^4 - s3*k^3 + s2*k^2 + s1*k";
-		
+		final String sK = "x-a";
+		return this.ODETest(sK);
+	}
+	public Polynom ODETest2() {
+		final String sK = "x^2-x+1";
+		return this.ODETest(sK);
+	}
+	public Vector<Pair<String, String>> TestCoeff(final String sKFunct) {
 		final Vector<Pair<String, String>> vReplace = new Vector<> ();
-		vReplace.add(new Pair<> ("K", "x^2-x+1"));
+		vReplace.add(new Pair<> ("K", sKFunct));
+		vReplace.add(new Pair<> ("s4", "1"));
+		vReplace.add(new Pair<> ("s1", "1"));
+		vReplace.add(new Pair<> ("s3", "-1"));
+		vReplace.add(new Pair<> ("s2", "1"));
+		return vReplace;
+	}
+	public Vector<Pair<String, String>> TestCoeff2(final String sKFunct) {
+		final Vector<Pair<String, String>> vReplace = new Vector<> ();
+		vReplace.add(new Pair<> ("K", sKFunct));
 		vReplace.add(new Pair<> ("s4", "x^2+x"));
 		vReplace.add(new Pair<> ("s1", "x^2+x"));
-		vReplace.add(new Pair<> ("s3", "x^2+2*x+1"));
+		vReplace.add(new Pair<> ("s3", "-x^2-2*x-1"));
 		vReplace.add(new Pair<> ("s2", "x^2"));
+		return vReplace;
+	}
+	public Polynom ODETest(final String sKFunct) {
+		final int nOrder = 5;
+		final String sRoot = "s4*k^4 + s3*k^3 + s2*k^2 + s1*k";
+		final Vector<Pair<String, String>> vReplace = this.TestCoeff(sKFunct);
 		
-		final Polynom pRez = this.Replace(sRoot, 5, vReplace);
+		final Polynom pRez = this.Replace(sRoot, nOrder, vReplace);
 		this.Display(polyFact.ToSeq(pRez, "y"));
 		
 		// ODE:
-		final Derive derive = new Derive();
+		final Derive derive = new Derive(this.math, this.polyFact);
 		final Polynom pDRez = derive.ODE(pRez, "x", "y");
 		this.PrintDy(pDRez, "y");
 		
@@ -111,73 +139,6 @@ public class TestPolyClass1 extends BaseGui {
 				final String sMY = (iPow == 0) ? "" : "*" + sVar + "^" + iPow;
 				this.Display(") " + sMY + " * " + dY + "\n");
 			}
-		}
-	}
-	
-	
-	public class Derive {
-
-		public Polynom ODE(final Polynom p, final String sX, final String sY) {
-			final int iPow = math.MaxPow(p, sY); // TODO: also the Coeff needed;
-			final Polynom pDRez = math.Mult(this.D(p, sY, sX), new Monom(sY, 1));
-			// TODO: evaluate alternative?
-			// final Monom mY5 = new Monom("y", 5);
-			// pRez.remove(mY5);
-			// final Polynom pY5 = math.Mult(pRez, -1);
-			// pDRez = math.Replace(pDRez, "y", 5, pY5);
-			return math.Diff(pDRez, math.Mult(p, new Monom("dy", 1), iPow));
-		}
-		
-		public Polynom D(final Polynom p, final String sY, final String sX) {
-			return this.D(polyFact.ToSeq(p, sY), sX);
-		}
-		
-		public Polynom D(final PolySeq seq, final String sVar) {
-			final String sY = seq.GetVar();
-			final String dy = "d" + seq.GetVar();
-			Polynom pRez = new Polynom(dy);
-			
-			for(final Map.Entry<Integer, Polynom> entryP : seq.entrySet()) {
-				// D(P) * y^iPow
-				final Polynom pDP = this.D(entryP.getValue(), sVar);
-				final int iPow = entryP.getKey();
-				if(iPow == 0) {
-					pRez = math.Add(pRez, pDP);
-					continue;
-				}
-				final Monom mY = new Monom(sY, iPow);
-				pRez = math.Add(pRez, math.Mult(pDP, mY));
-				// P * D(y^iPow)
-				final Polynom pBase = math.Mult(entryP.getValue(), iPow);
-				final Monom mdY = new Monom(sY, iPow - 1).Add(dy, 1);
-				pRez = math.Add(pRez, math.Mult(pBase, mdY));
-			}
-			
-			return pRez;
-		}
-		
-		public Polynom D(final Polynom p, final String sVar) {
-			final Polynom pRez = new Polynom(sVar);
-			
-			for(final Map.Entry<Monom, Double> entryP : p.entrySet()) {
-				final Pair<Monom, Integer> dm = this.D(entryP.getKey(), sVar);
-				if(dm != null) {
-					pRez.Add(dm.key, entryP.getValue() * dm.val);
-				}
-			}
-			
-			return pRez;
-		}
-		
-		public Pair<Monom, Integer> D(final Monom m, final String sVar) {
-			final Integer iPow = m.get(sVar);
-			if(iPow == null) { return null; }
-			
-			final Monom dm = new Monom(m);
-			dm.remove(sVar);
-			dm.Add(sVar, iPow - 1);
-			return new Pair<> (dm, iPow);
-			
 		}
 	}
 }

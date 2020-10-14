@@ -21,6 +21,10 @@ public class PolySeq extends TreeMap<Integer, Polynom> {
 
 	// ++++++++++ MEMBER FUNCTIONS +++++++++++
 	
+	public String GetVar() {
+		return sVarName;
+	}
+	
 	public Polynom GetNew(final Integer iPow) {
 		{
 			final Polynom pExist = this.get(iPow);

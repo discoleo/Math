@@ -25,6 +25,9 @@ public class Test extends BaseGui {
 		new TestDerived(parser, math, polyFact, this).Test();
 		// new TestConj(this).Test();
 		this.ShiftP3();
+		
+		//
+		testClass1.Test();
 	}
 	
 	public Polynom Start() {

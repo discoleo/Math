@@ -28,7 +28,8 @@ public class Derive {
 	}
 
 	public Polynom ODE(final Polynom p, final String sX, final String sY) {
-		final int iPow = math.MaxPow(p, sY); // TODO: also the Coeff needed;
+		// TODO: evaluate if MaxPow() is OK?
+		final int iPow = math.MaxPowSimple(p, sY); // TODO: also the Coeff needed;
 		final Polynom pDRez = math.Mult(this.D(p, sY, sX), new Monom(sY, 1));
 		// TODO: evaluate alternative?
 		// final Monom mY5 = new Monom("y", 5);

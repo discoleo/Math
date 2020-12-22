@@ -42,11 +42,14 @@ public class ElementaryPoly {
 		mE3 = new Monom("x", 1).Add("y", 1).Add("z", 1);
 		//
 		BuildR1(3);
-		TestE2(8);
+		TestE2(20);
 	}
 	
 	// ++++++++++ MEMBER FUNCTIONS ++++++++++++
 	
+	public void Print(final Polynom pTest) {
+		System.out.println(pTest.toString());
+	}
 	public void Print(final Vector<Polynom> pTest) {
 		for(final Polynom p : pTest) {
 			System.out.println(p.toString());
@@ -57,10 +60,22 @@ public class ElementaryPoly {
 			System.out.println(entry.getKey() + ": " + entry.getValue().toString());
 		}
 	}
+	public void PrintP(final Vector<Pair<Polynom, String>> pTest) {
+		for(final Pair<Polynom, String> p : pTest) {
+			System.out.println(p.key.toString());
+		}
+	}
+	public Polynom GetE2(final int npos) {
+		final Polynom p = vPE2.get(npos).key;
+		this.Print(p);
+		return new Polynom(p);
+	}
 	public void TestE2(final int iPow) {
 		// TODO: Verify if CORRECT!
 		this.BuildE(iPow);
 		this.Print(mapPR2);
+		// this.PrintP(vPE2);
+		this.Print(GetE2(24));
 	}
 	
 	// +++ Build the symmetric Polynomials
@@ -69,7 +84,7 @@ public class ElementaryPoly {
 		this.BuildE1(nPow);
 		this.BuildE2(nPow);
 		this.BuildR1(nPow);
-		this.BuildR2(nPow - 2);
+		this.BuildR2(nPow);
 	}
 	public Vector<Polynom> BuildE1(final int nPow) {
 		for(int n= vPE1.size() + 1; n <= nPow; n++) {
@@ -107,7 +122,7 @@ public class ElementaryPoly {
 			}
 		}
 		
-		return vPE1;
+		return vPE1; // ??? vPE1 vs vPE2 ???
 	}
 	
 	// +++ Build Replacements +++
@@ -137,6 +152,7 @@ public class ElementaryPoly {
 	}
 	
 	public TreeMap<String, Polynom> BuildR2(final int nPow) {
+		final int SKIP_MAX = 6;
 		// fast Version for 3 Variables
 		if(mapPR2.size() == 0) {
 			mapPR2.put("E2", new Polynom(vMER.get(1), 1, sS));
@@ -145,7 +161,7 @@ public class ElementaryPoly {
 			for(int p2 = 1; p2 <= p1; p2++) {
 				// x^p1 * y^p2
 				// just for Test
-				if(p2 >= 5 || p1 > 5) { continue; }
+				if(p2 >= SKIP_MAX || p1 > SKIP_MAX) { continue; }
 				
 				final int idP = (p1 - 1)*p1/2 + p2 - 1; // Vector[0]: offset = -1;
 				if(mapPR2.size() > idP) { continue; }
@@ -156,9 +172,9 @@ public class ElementaryPoly {
 					Polynom pE2Pow = math.Pow(vPE2.get(0).key, p1);
 					pE2Pow = EncodeE3V3(pE2Pow);
 					pE2Pow = math.Diff(pE2Pow, vPE2.get(this.GetIdE2(p1, p2)).key);
-					System.out.println("After encoding: " + pE2Pow.toString());
-					// computes automatically
-					pE2Pow = this.EncodeEV3(pE2Pow, p1 + p2 - 1);
+					System.out.println("After E2^n encoding: " + pE2Pow.toString());
+					// computes automatically: TODO: misses power;
+					pE2Pow = this.EncodeEV3(pE2Pow, p1 + p2 + 3); // p1 + p2 - 1
 					pE2Pow = math.Diff(this.E2Pow(p1), pE2Pow);
 					pE2Pow = this.ReplaceEV3(pE2Pow, p1 + p2 - 1);
 					System.out.println("After encoding: " + pE2Pow.toString());
@@ -225,6 +241,9 @@ public class ElementaryPoly {
 		final Pair<Polynom, String> pairP = vPE2.get(nPow - 2);
 		final String sReplace = pairP.val;
 		final Polynom pRE = math.DivExact(p, pairP.key, sReplace);
+		if(pRE == null) {
+			System.out.println("Null: " + sReplace);
+		}
 		return pRE;
 	}
 	
@@ -258,6 +277,10 @@ public class ElementaryPoly {
 			pR = math.Replace(pR, "E1_" + (iPow+1), vPR1.get(iPow));
 		}
 		// E2...
+		pR = math.Replace(pR, "E2c_4_3", mapPR2.get("E2c_4_3")); // hack ???
+		pR = math.Replace(pR, "E2c_3_3", mapPR2.get("E2c_3_3")); // hack ???
+		pR = math.Replace(pR, "E2c_3_2", mapPR2.get("E2c_3_2")); // hack ???
+		pR = math.Replace(pR, "E2c_3_1", mapPR2.get("E2c_3_1")); // hack ???
 		pR = math.Replace(pR, "E2c_2_2", parser.Parse("E2^2 - 2*E3*" + sS, sS));
 		pR = math.Replace(pR, "E2c_2_1", parser.Parse(sS + "*E2 - 3*E3", sS));
 		

@@ -9,6 +9,8 @@
  * */
 package gui;
 
+import java.util.Vector;
+
 import data.PolySeq;
 import data.Polynom;
 import io.Parser;
@@ -54,6 +56,14 @@ public class BaseGui implements IDisplay {
 	public void Display(final PolySeq p) {
 		System.out.println(p.Print());
 	}
+	@Override
+	public void Display(final Vector<Polynom> vP) {
+		for(final Polynom p : vP) {
+			this.Display(p);
+		}
+	}
+	
+	// +++ Other +++
 	
 	public void TestFractionDecomposition() {
 		final TestFractions test = new TestFractions(parser, math, polyFact, this);

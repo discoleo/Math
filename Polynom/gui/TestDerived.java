@@ -31,6 +31,29 @@ public class TestDerived {
 	
 	// ++++++++++++++++++++++++
 	
+	public Polynom ExpandRoot(final Polynom p1, final Polynom pMult, final Polynom pDet,
+			final Polynom pDiv,
+			final int iPow, final int iDiv) {
+		Polynom pR = math.Pow(pMult, iPow);
+		pR = math.Mult(pR, pDet);
+		pR = math.Mult(pR, -1);
+		pR = math.Add(pR, math.Pow(p1, iPow));
+		pR = math.Mult(pR, 1, iDiv);
+		if(pDiv != null) {
+			final Pair<Polynom, Polynom> pairDiv = this.Factorize(pR, pDiv);
+			return pairDiv.key;
+		}
+		return pR;
+	}
+	
+	public final Pair<Polynom, Polynom> Factorize(final Polynom pBase, final Polynom pDiv) {
+		final Pair<Polynom, Polynom> pairDiv = math.Div(pBase, pDiv);
+
+		display.Display(polyFact.ToSeq(pairDiv.key, pBase.sRootName));
+		display.Display(pairDiv.val);
+		return pairDiv;
+	}
+	
 	public void Test() {
 		System.out.println("Testing Derived Polynoms:");
 		
@@ -42,12 +65,16 @@ public class TestDerived {
 		// this.P2X4Y_Classic();
 		// this.P2X4_Classic();
 		// this.P2X4_Shifted();
-		// this.P3X3();
 		// this.P2X5_Classic();
 		// this.E3();
 		// this.P6FromP3();
 		this.S3X2(); // TODO: factorise polynomial
 		this.S3X2Ext();
+		this.Expand2();
+		// Ht [S3, x^3 + b*y] System
+		// this.P3X3Simple();
+		// this.P3X3();
+		// this.Factorize();
 		
 		// ++++ other Examples ++++
 		// Examples of Derived Polynomials:
@@ -64,6 +91,43 @@ public class TestDerived {
 		
 		// Examples 4 & 5:
 		// this.Example4();
+	}
+	
+	public void Factorize() {
+		final Polynom pBase = parser.Parse("x^8 - 4*R*x^6 + 6*R^2*x^4 - 2*b1^2*R*x^4 +"
+				+ "4*R^2*b1^2*x^2 - 4*R^3*x^2 + b1^7*x + R^4 + b1^4*R^2 - 2*b1^2*R^3 - b[1]^6*R", "x");
+		final Polynom pDiv = parser.Parse("x^2 + b1*x - R", "x");
+
+		final Pair<Polynom, Polynom> pairDiv = math.Div(pBase, pDiv);
+
+		display.Display(pairDiv.key);
+		display.Display(pairDiv.val);
+	}
+	
+	public void Expand() {
+		// expand some polynomials
+		final Polynom pBase = parser.Parse("R3*S^5 - 5*E2*R3*S^3 + 7*R3^2*S^2 - R1*E2*S^2"
+				+ "+ E2^2*R3*S + R1*R3*S + R1^2 + 2*R1*E2^2 + E2^4", "S");
+		Polynom pExpand = math.Mult(pBase, 256);
+		final Polynom pReplace = parser.Parse("0.25*S^2 + 0.25*Dsq", "S");
+		final Polynom pDet = parser.Parse("S^4 - 8*R3*S - 8*R1 - 8*R2", "S");
+
+		display.Display("Expanded:");
+		pExpand = math.Replace(pExpand, "E2", pReplace);
+		display.Display(pExpand.toString());
+		pExpand = math.Replace(pExpand, "Dsq", 2, pDet);
+		display.Display(pExpand.toString());
+	}
+	public void Expand2() {
+		final Polynom pSq = parser.Parse("S^8 - 12*R3*S^5 - 8*R1*S^4 - 8*R2*S^4 + 216*R3^2*S^2"
+				+ "- 16*R1*R2 + 8*R1^2 + 8*R2^2", "S");
+		final Polynom pMult = parser.Parse("4*R1*S^2 + 4*R2*S^2 + 40*R3*S^3 - S^6", "S");
+		final Polynom pDsq = parser.Parse("S^4 - 8*R3*S - 8*R1 - 8*R2", "S");
+		
+		final Polynom pRez = math.Mult(math.ExpandSqrt(pSq, pMult, pDsq, 2), 1, 64);
+		display.Display("Expanded:");
+		display.Display(pRez.toString());
+		display.Display(pRez.values().toString());
 	}
 	
 	public void Example2() {
@@ -241,6 +305,19 @@ public class TestDerived {
 		display.Display(polyFact.ToSeq(math.Mult(pDerived, pBaseX), "x"));
 	}
 
+	public void P3X3Simple() {
+		display.Display("\nP3 System: X^3 Base");
+		final String sX = "S";
+		
+		final Polynom pBase = parser.Parse("48*S^6 + 114*b*S^4 + 12*b^2*S^2 - 288*R*S^3 + 54*b*R*S + 27*b^3", sX);
+		final Polynom pMult = parser.Parse("10*S^4 + 4*b*S^2 - 18*R*S + 9*b^2", sX);
+		final Polynom pDet  = parser.Parse("9*b^2 + 24*S^4 + 96*b*S^2 - 216*R*S", sX);
+		final Polynom pDiv  = parser.Parse("S^3 + 9*b*S - 27*R", "S");
+		
+		Polynom pRez = this.ExpandRoot(pBase, pMult, pDet, pDiv, 2, -32*3);
+		display.Display(polyFact.ToSeq(pRez, sX));
+	}
+
 	public void P3X3() {
 		display.Display("\nP3 System: X^3 Base");
 		final String sX = "x";
@@ -255,13 +332,14 @@ public class TestDerived {
 		pClassic = math.Add(pClassic, parser.Parse("b1^13*x - R*b1^12", sX));
 		
 		final Polynom pBaseX = parser.Parse("x^3 + b1*x - R", "x");
-		Polynom pDerived = parser.Parse(
-				"x", sX);
+		Polynom pDerived = parser.Parse("x", sX);
 		
 		display.Display(polyFact.ToSeq(pClassic, sX));
 		display.Display(polyFact.ToSeq(math.Mult(pDerived, pBaseX), "x"));
 		
-		// Elementary P
+		this.Factorize(pClassic, parser.Parse("x^3 + b1*x - R", "x"));
+		
+		// Task 2: Elementary P
 		final Polynom pPxy = parser.Parse("x^2 + y^2 + x*y", sX);
 		final Polynom pPxz = parser.Parse("x^2 + z^2 + x*z", sX);
 		final Polynom pPyz = parser.Parse("y^2 + z^2 + y*z", sX);

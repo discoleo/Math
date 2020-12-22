@@ -28,6 +28,10 @@ public class Test extends BaseGui {
 		
 		//
 		testClass1.Test();
+		
+		// Poly Systems
+		new TestSystems(this.parser, this.math, this.polyFact, this.testClass1)
+			.Test();
 	}
 	
 	public Polynom Start() {

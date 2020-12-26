@@ -39,8 +39,19 @@ public class TestSystems {
 		// this.ExpandHtS3Diff3();
 		// this.DivHt3Variant();
 		// this.ExpandDiffPQ();
-		this.ExpandDiffPQFinal();
+		// this.ExpandDiffPQFinal();
 		// this.TestGCDSpecial();
+		// this.ClassicPoly();
+		// this.ClassicPolyP4_ExtXY();
+		// this.ClassicPolyS3_AsymDual(); // TODO: optimize
+		this.ClassicPolyS3_AsymDualCorect();
+	}
+	
+	public Polynom Div(final String sP1, final String sDiv, final String sVar) {
+		final Polynom pR =
+				math.Div(parser.Parse(sP1, "x"),
+						parser.Parse(sDiv, sVar)).key;
+		return pR;
 	}
 	
 	// +++++++++++++++++++++++
@@ -131,6 +142,121 @@ public class TestSystems {
 		Polynom pR = math.GcdExtract(p1, p2, "y");
 		display.Display("Extract P(y, x):");
 		display.Display(polyFact.ToSeq(pR, "y"));
+	}
+	public void ClassicPolyP3XY() {
+		final Polynom p1 = parser.Parse("x^3 + b2*x*y + b1*y - R", "x");
+		final Polynom p2 = parser.Parse("y^3 + b2*x*y + b1*x - R", "x");
+		final Polynom pDiv = parser.Parse("x^3 + b2*x^2 + b1*x - R", "x");
+
+		Polynom pR = polyFact.ClassicPolynomial(p2, p1, pDiv);
+		pR = math.Mult(pR, -1);
+		display.Display("Extract P(y, x):");
+		display.Display(polyFact.ToSeq(pR, "x"));
+	}
+	public void ClassicPolyP3XYExt() {
+		final Polynom p1 = parser.Parse("x^3 + b3*x*y + b2*y^2 + b1*y - R", "x");
+		final Polynom p2 = parser.Parse("y^3 + b3*x*y + b2*x^2 + b1*x - R", "x");
+		final Polynom pDiv = parser.Parse("x^3 + b3*x^2 + b2*x^2 + b1*x - R", "x");
+
+		Polynom pR = polyFact.ClassicPolynomial(p1, p2, pDiv);
+		pR = math.Div(pR, parser.Parse("b2^2", "b2")).key;
+		display.Display("Extract P(y, x):");
+		display.Display(polyFact.ToSeq(pR, "x"));
+	}
+	public void ClassicPolyX3aY3() {
+		final Polynom p1 = parser.Parse("a1*x^3 + a2*y^3 + b1*x - R", "x");
+		final Polynom p2 = parser.Parse("a1*y^3 + a2*x^3 + b1*y - R", "x");
+		final Polynom pDiv = parser.Parse("a1*x^3 + a2*x^3 + b1*x - R", "x");
+
+		Polynom pR = polyFact.ClassicPolynomial(p1, p2, pDiv);
+		display.Display("Extract P(y, x):");
+		display.Display(polyFact.ToSeq(pR, "x"));
+	}
+	public void ClassicPolyX3aY3Ext() {
+		final Polynom p1 = parser.Parse("a1*x^3 + a2*y^3 + b2*x*y + b1*x - R", "x");
+		final Polynom p2 = parser.Parse("a1*y^3 + a2*x^3 + b2*x*y + b1*y - R", "x");
+		final Polynom pDiv = parser.Parse("a1*x^3 + a2*x^3 + b2*x^2 + b1*x - R", "x");
+
+		Polynom pR = polyFact.ClassicPolynomial(p1, p2, pDiv);
+		pR = math.Div(pR, parser.Parse("a2", "a2")).key;
+		// pR = math.Div(pR, parser.Parse("a2^2 + a1^2 - 2*a1*a2", "a2")).key;
+		// pR = math.Div(pR, parser.Parse("a2 - a1", "a2")).key;
+		display.Display("x^3 + y^3: Extract P(y, x):");
+		display.Display(polyFact.ToSeq(pR, "x"));
+		//
+		display.Display(polyFact.ToSeq(
+				this.Div("- 3*R*a1*a2^2*b2 + 3*R*a1^2*a2*b2 - R*a1^3*b2 + R*a2^3*b2 + 2*a1*a2*b1*b2^2"
+						+ "- a1^2*b1*b2^2 - a1^3*b1^2 - a2^2*b1*b2^2 + a2^3*b1^2",
+						"a2 - a1", "a2"), "x"));
+		//
+		display.Display(polyFact.ToSeq(
+				this.Div("2*a1*a2^3 - 2*a1^3*a2 + a1^4 - a2^4",
+						"a2^2+a1^2-2*a1*a2", "a2"), "x"));
+	}
+	public void ClassicPolyX3YXY3() {
+		final Polynom p1 = parser.Parse("a1*x^3*y + a2*x*y^3 + b1*x - R", "x");
+		final Polynom p2 = parser.Parse("a1*x*y^3 + a2*x^3*y + b1*y - R", "x");
+		final Polynom pDiv = parser.Parse("a1*x^4 + a2*x^4 + b1*x - R", "x");
+
+		Polynom pR = polyFact.ClassicPolynomial(p1, p2, pDiv);
+		display.Display("Extract P(y, x):");
+		display.Display(polyFact.ToSeq(pR, "x"));
+	}
+	public void ClassicPolyP3_XY2() {
+		final Polynom p1 = parser.Parse("x^3 + b3*x^2*y + b2*x*y^2 + b1*x - R", "x");
+		final Polynom p2 = parser.Parse("y^3 + b3*y^2*x + b2*y*x^2 + b1*y - R", "x");
+		final Polynom pDiv = parser.Parse("x^3 + b3*x^3 + b2*x^3 + b1*x - R", "b3");
+
+		Polynom pR = polyFact.ClassicPolynomial(p1, p2, pDiv);
+		pR = math.Div(pR, parser.Parse("b2^2", "b2")).key;
+		display.Display("Extract P(y, x):");
+		display.Display(polyFact.ToSeq(pR, "x"));
+	}
+	public void ClassicPolyP4_ExtXY() {
+		final Polynom p1 = parser.Parse("x^4 + b2*x*y + b1*y - R", "x");
+		final Polynom p2 = parser.Parse("y^4 + b2*x*y + b1*x - R", "x");
+		final Polynom pDiv = parser.Parse("x^4 + b2*x^2 + b1*x - R", "x");
+
+		Polynom pR = polyFact.ClassicPolynomial(p2, p1, pDiv);
+		// pR = math.Div(pR, parser.Parse("b2^2", "b2")).key;
+		display.Display("Extract P(y, x):");
+		display.Display(polyFact.ToSeq(pR, "x"));
+	}
+
+	public void ClassicPolyS3_AsymDualCorect() {
+		final Polynom p = parser.Parse("x*y^2 + y*z^2 + z*x^2 - R1", "x");
+		final Polynom pR3 = parser.Parse("R3", "x");
+		final Polynom pMultR3 = parser.Parse("x*z", "x");
+		//
+		final Polynom pY = parser.Parse("x*z^2*R1 - x^2*z*R2", "x");
+		final Polynom pMultY = parser.Parse("z^3*R3 - x^3*R3", "x");
+		
+		Polynom pR = math.ReplaceOrMult(p, "y", pR3, pMultR3);
+		pR = polyFact.ClassicPolynomial(pR, math.Diff(pMultY, pY), null, "z");
+		// pR = math.DivAbs(pR, new Monom("R2", 1));
+		pR = math.DivAbs(pR, new Monom("x", 4));
+		pR = math.Mult(pR, -1);
+		display.Display("S3 Asym Dual: the Polynomial " + pR.size());
+		display.Display(polyFact.ToSeq(pR, "x")); // x^39, but should be x^18;
+	}
+	public void ClassicPolyS3_AsymDual() {
+		final Polynom p1 = parser.Parse("x*y^2 + y*z^2 + z*x^2 - R1", "x");
+		final Polynom p2 = parser.Parse("x*z^2 + y*x^2 + z*y^2 - R2", "x");
+		final Polynom p3 = parser.Parse("x*y*z - R3", "x");
+
+		display.Display("S3 Asym Dual:");
+		// Polynom pR = polyFact.ClassicPolynomial(new Polynom [] {p1, p2, math.Add(p1, p2), p3}, null,
+		//		new String [] {"y", null, "z"});
+		Polynom pR = polyFact.ClassicPolynomial(new Polynom [] {p3, p1, p2, math.Add(p1, p2)}, null,
+				new String [] {"y", "z", null}); // very fast! (but x^72)
+		pR = math.DivAbs(pR, new Monom("x", 1).Add("R1", 4).Add("R3", 6));
+		// pR = math.DivAbs(pR, new Monom("x", 12));
+		// pR = math.Div(pR, parser.Parse("b2^2", "b2")).key;
+		// pR = math.Replace(pR, "R1", 1, 1);
+		// pR = math.Replace(pR, "R2", 1, 1);
+		// pR = math.Replace(pR, "R3", 1, 1);
+		display.Display("S3 Asym Dual: the Polynomial");
+		display.Display(polyFact.ToSeq(pR, "x"));
 	}
 	
 	public void ExpandDiffPQFinal() {

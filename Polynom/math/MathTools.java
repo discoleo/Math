@@ -55,6 +55,78 @@ public class MathTools {
 		
 		return minPow;
 	}
+	public Monom MinPow(final Monom mR, final Monom m) {
+		// minimal Powers between mR & m;
+		// modifies mR;
+		final Iterator<Map.Entry<String, Integer>> it = mR.entrySet().iterator();
+		
+		while(it.hasNext()) {
+			final Map.Entry<String, Integer> entry = it.next();
+			final Integer iPow = m.get(entry.getKey());
+			if(iPow == null) {
+				it.remove(); continue;
+			}
+			if(iPow < entry.getValue()) {
+				if(iPow == 0) it.remove();
+				else {
+					mR.replace(entry.getKey(), iPow);
+				}
+			}
+		}
+		return mR;
+	}
+	public Monom MinPow(final Polynom [] p) {
+		if(p.length == 0) return new Monom();
+		final Monom mR = new Monom(p[0].firstKey());
+		for(final Polynom p1 : p) {
+			for(final Monom m : p1.keySet()) {
+				this.MinPow(mR, m);
+			}
+		}
+		
+		return mR;
+	}
+	public Monom Reduce(final Monom m, final Monom mMinPowers) {
+		final Monom mR = new Monom(m);
+		for(final Map.Entry<String, Integer> entry : mMinPowers.entrySet()) {
+			final Integer iPow = mR.get(entry.getKey());
+			if(iPow == null || iPow < entry.getValue()) {
+				System.out.println("Error: Monom does NOT contain var: " + entry.getKey());
+				return null;
+			}
+			if(iPow == entry.getValue()) {
+				mR.remove(entry.getKey());
+				continue;
+			}
+			mR.replace(entry.getKey(), iPow - entry.getValue());
+		}
+		return mR;
+	}
+	public Polynom Reduce(final Polynom p, final Monom mMinPowers) {
+		// reduces each Monom by mMinPowers;
+		// = p / mMinPowers;
+		final Polynom pR = new Polynom(p.sRootName);
+		
+		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+			final Monom mR = this.Reduce(entryM.getKey(), mMinPowers);
+			pR.Add(mR, entryM.getValue());
+		}
+		return pR;
+	}
+	public void Reduce(final Polynom [] p) {
+		// simplify polynoms in p
+		// by the common set of variables;
+		final Monom mMinPowers = this.MinPow(p);
+		// System.out.println("Common: " + mMinPowers.toString());
+		
+		if(mMinPowers.size() == 0) {
+			return;
+		}
+		for(int id=0; id < p.length; id++) {
+			p[id] = this.Reduce(p[id], mMinPowers);
+		}
+	}
+	
 	public Polynom Leading(final Polynom p, final String sVar) {
 		if(p.sRootName.equals(sVar) && p.IsSortedByPrimary()) {
 			// TODO: verify that it is the last key
@@ -236,6 +308,21 @@ public class MathTools {
 		}
 		return mRez;
 	}
+	public Monom Largest(final Polynom p, final Monom m, final String sVar) {
+		// monom from p that contains m and has largest sVar
+		int iMaxPow = 0;
+		Monom mR = null;
+		for(final Monom mT : p.descendingKeySet()) {
+			if( ! this.ContainsB(mT, m)) continue;
+			final Integer iPow = mT.get(sVar);
+			if(iPow == null) continue;
+			if(iPow > iMaxPow) {
+				iMaxPow = iPow;
+				mR = mT;
+			}
+		}
+		return mR;
+	}
 	public Pair<Polynom, Polynom> Div(final Polynom p1, final Polynom pDiv) {
 		// "agile" implementation of a very simple division
 		Polynom pRemain = new Polynom(p1, pDiv.sRootName);
@@ -246,14 +333,20 @@ public class MathTools {
 		final double dDiv = entryDiv.getValue();
 		
 		while(pRemain.size() > 0) {
-			final Map.Entry<Monom, Double> entryP = pRemain.lastEntry();
-			Monom mTop = entryP.getKey();
-			mTop = this.DivAbs(mTop, mDiv);
+			// final Map.Entry<Monom, Double> entryP = pRemain.lastEntry();
+			// Monom mTop = entryP.getKey();
+			Monom mTop = this.Largest(pRemain, mDiv, pDiv.sRootName);
+			final double dPVal;
+			if(mTop != null) {
+				dPVal = pRemain.get(mTop);
+				mTop = this.DivAbs(mTop, mDiv);
+			} else dPVal = 0;
 			if(mTop == null) {
 				System.out.println("Error: NOT divisible!");
 				return new Pair<> (pRez, pRemain); // TODO: more advanced
 			}
-			final double dVal = entryP.getValue() / dDiv;
+			// final double dVal = entryP.getValue() / dDiv;
+			final double dVal = dPVal / dDiv;
 			pRemain = this.Add(pRemain, this.MultInPlace(this.Mult(pDiv, mTop), -dVal, 1.0d));
 			pRez.Add(mTop, dVal);
 		}
@@ -295,7 +388,8 @@ public class MathTools {
 		return pR;
 	}
 	public Monom DivExact(final Monom m1, final Monom m2) {
-		// exact Division: same Power!
+		// exact Division: must have same Power!
+		// (divisibility is NOT sufficient!)
 		// used for elementary Polynomials
 		if(m2.size() == 0) {
 			return null;
@@ -372,10 +466,15 @@ public class MathTools {
 		
 		return pDiv;
 	}
-	
+
 	public Polynom GcdExtract(final Polynom p1, final Polynom p2, final String sVar) {
+		return this.GcdExtract(p1, p2, sVar, true);
+	}
+	public Polynom GcdExtract(final Polynom p1, final Polynom p2, final String sVar, final boolean skipOrder1) {
 		Polynom pSm = p1;
 		Polynom pGr = p2;
+		final Polynom [] pMM = new Polynom [2];
+		
 		int iPow1 = this.MaxPow(pSm, sVar);
 		int iPow2 = this.MaxPow(pGr, sVar);
 		if(iPow1 > iPow2) {
@@ -383,25 +482,37 @@ public class MathTools {
 			final int iTmp = iPow1; iPow1 = iPow2; iPow2 = iTmp;
 		}
 		
+		// int count = 0;
 		while(true) {
 			if(iPow1 <= 1) return pSm;
 			if(iPow2 <= 1) return pGr;
 			
-			final Polynom pM1 = this.ExtractMonoms(pSm, sVar, iPow1);
-			final Polynom pM2 = this.ExtractMonoms(pGr, sVar, iPow2);
-			final Polynom pM1Adj = this.Mult(pSm, pM2);
+			pMM[0] = this.ExtractMonoms(pSm, sVar, iPow1);
+			pMM[1] = this.ExtractMonoms(pGr, sVar, iPow2);
+			// TODO: find complete GCD first;
+			System.out.println("Extr: " + pMM[0].size() + ", " + pMM[1].size());
+			// System.out.println("Extr: " + pMM[0].toString());
+			// System.out.println("Extr: " + pMM[1].toString());
+			this.Reduce(pMM);
+			// System.out.println("Extr: " + pMM[0].toString());
+			
+			final Polynom pM1Adj = this.Mult(pSm, pMM[1]);
 			final Polynom pR = this.Diff(
 					(iPow1 < iPow2) ? this.Mult(pM1Adj, new Monom(sVar, iPow2 - iPow1)) : pM1Adj,
-					this.Mult(pGr, pM1));
+					this.Mult(pGr, pMM[0]));
+			
 			final int iPowR = this.MaxPow(pR, sVar);
 			if(iPowR <= 1) return pR;
 			if(iPowR <= iPow1) {
 				pGr = pSm; pSm = pR;
 				iPow2 = iPow1; iPow1 = iPowR;
-				System.out.println("Smaller: " + iPowR);
-			} else if(iPowR <= iPow2) {
+				System.out.println("Smaller: " + iPowR + ", Size = " + pR.size());
+				// System.out.println(pR.toString());
+				// count ++;
+				// if(count >= 3) return pR;
+			} else if(iPowR < iPow2) {
 				pGr = pR;
-				iPow2 = iPow1;
+				iPow2 = iPowR;
 				System.out.println("Intermediate: " + iPowR);
 			} else {
 				System.out.println("GCD Error: should NOT happen!");
@@ -553,6 +664,21 @@ public class MathTools {
 			iMaxPow = Math.min(iMaxPow, iMaxPow1);
 		}
 		return iMaxPow;
+	}
+	public boolean ContainsB(final Monom m1, final Monom m2) {
+		if(m2.size() == 0) {
+			return true;
+		}
+		for(final Map.Entry<String, Integer> entryM2 : m2.entrySet()) {
+			final Integer iPow1 = m1.get(entryM2.getKey());
+			if(iPow1 == null) {
+				return false;
+			}
+			if(iPow1 < entryM2.getValue()) {
+				return false;
+			}
+		}
+		return true;
 	}
 	public int SamePower(final Polynom p, final String sVar) {
 		// assumes NO monomes with coeff = 0;
@@ -736,6 +862,10 @@ public class MathTools {
 		}
 		
 		return polyRez;
+	}
+	public Polynom ReplaceOrMult(final Polynom p, final String sVar,
+			final Polynom pW, final Polynom pMult) {
+		return this.ReplaceOrMult(p, sVar, pW, pMult, this.MaxPow(p, sVar));
 	}
 	public Polynom ReplaceOrMult(final Polynom p, final String sVarName,
 			final Polynom pW, final Polynom pMult, final int maxPow) {

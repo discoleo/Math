@@ -5,6 +5,7 @@ import java.util.Vector;
 
 import data.Monom;
 import data.PolyResult;
+import data.PolySeq;
 import data.Polynom;
 
 public class PolyFactory extends BaseFactory {
@@ -132,6 +133,91 @@ public class PolyFactory extends BaseFactory {
 		}
 		
 		return vP;
+	}
+	
+	public void Display(final PolySeq seq) {
+		System.out.println(seq.toString());
+	}
+	public void Display(final Polynom p) {
+		System.out.println(p.toString());
+	}
+	public void Display(final String str) {
+		System.out.println(str);
+	}
+
+	public Polynom ClassicPolynomial(final Polynom p1, final Polynom p2, final Polynom pDiv) {
+		return this.ClassicPolynomial(p1, p2, pDiv, "y");
+	}
+	public Polynom ClassicPolynomial(final Polynom p1, final Polynom p2, final Polynom pDiv, final String sVar) {
+		final String sVarDiv = "pDiv";
+		final Monom mDiv = new Monom(sVarDiv, 1);
+		
+		Polynom pR = math.GcdExtract(p1, p2, sVar);
+		final PolySeq seq = this.ToSeq(pR, sVar);
+		
+		final Polynom pY = math.Mult(math.Mult(seq.get(0), mDiv), -1);
+		final Polynom pDivY = seq.get(1);
+		
+		pR = math.Replace(p1, sVar, pY);
+		// Debug:
+		System.out.println("\nClassic Poly:\nExtract P(y, x):");
+		this.Display(seq);
+		// this.Display(this.ToSeq(pR, "x"));
+		this.Display(pR.toString());
+		
+		final int iMaxPow = math.MaxPow(pR, sVarDiv);
+		if(iMaxPow > 0) {
+			pR = math.Mult(pR, new Monom("pDivInv", iMaxPow));
+			mDiv.Add("pDivInv", 1);
+			pR = math.Replace(pR, mDiv, "Identity");
+			pR = math.Replace(pR, "Identity", 1, 1);
+			System.out.println("\nDIV routine:\n" + pR.toString());
+			System.out.println("\nDIV routine:\n" + pDivY.toString());
+			pR = math.Replace(pR, "pDivInv", pDivY);
+		}
+
+		if(pDiv != null) {
+			pR = math.Div(pR, pDiv).key;
+		}
+		return pR;
+	}
+	public Polynom ClassicPolynomial(final Polynom [] p, final Polynom pDiv, final String [] sVar) {
+		final String sVarDiv = "pDiv";
+		final Monom mDiv = new Monom(sVarDiv, 1);
+		final Monom mIdent = new Monom(mDiv).Add("pDivInv", 1);
+		
+		for(int id=0; id < p.length - 1; id++) {
+			if(sVar[id] == null) { continue; }
+			Polynom pR = math.GcdExtract(p[id], p[id + 1], sVar[id]);
+			final PolySeq seq = this.ToSeq(pR, sVar[id]);
+			// Debug
+			// this.Display("Polynoms:");
+			// this.Display(p[id]);
+			// this.Display(p[id+1]);
+			
+			final Polynom pY = math.Mult(math.Mult(seq.get(0), mDiv), -1);
+			final Polynom pDivY = seq.get(1);
+			for(int idAll = id + 1; idAll < p.length; idAll++) {
+				pR = math.Replace(p[idAll], sVar[id], pY);
+				final int iMaxPow = math.MaxPow(pR, sVarDiv);
+				if(iMaxPow > 0) {
+					pR = math.Mult(pR, new Monom("pDivInv", iMaxPow));
+					pR = math.Replace(pR, mIdent, "Identity");
+					pR = math.Replace(pR, "Identity", 1, 1);
+					// System.out.println("\nDIV routine: R\n" + pR.toString());
+					// System.out.println("\nDIV routine: Div\n" + pDivY.toString());
+					pR = math.Replace(pR, "pDivInv", pDivY);
+				}
+				p[idAll] = pR;
+			}
+		}
+
+		if(pDiv != null) {
+			return math.Div(p[p.length - 1], pDiv).key;
+		}
+		System.out.println("Finished!");
+		System.out.println("Polynom terms = " + p[p.length - 1].size());
+		return p[p.length - 1];
 	}
 	
 	// +++ Symmetric Systems +++

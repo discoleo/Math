@@ -44,7 +44,13 @@ public class TestSystems {
 		// this.ClassicPoly();
 		// this.ClassicPolyP4_ExtXY();
 		// this.ClassicPolyS3_AsymDual(); // TODO: optimize
-		this.ClassicPolyS3_AsymDualCorect();
+		// this.ClassicPolyS3_AsymDualCorect();
+		// this.ExpandAsymS2P3();
+		// this.ExpandAsymCoeffS2P2();
+		// this.ExpandAsymCoeffS2P3();
+		// this.HtS3P2();
+		// this.ClassicHtMixt21S2P2();
+		this.ClassicHtMixt31S2P2();
 	}
 	
 	public Polynom Div(final String sP1, final String sDiv, final String sVar) {
@@ -372,5 +378,103 @@ public class TestSystems {
 		
 		pRez = math.Replace(pRez, "R", parser.Parse("R1 - b2*S - b3*S^2 - b4*S^3", "S"));
 		display.Display(polyFact.ToSeq(pRez, "S"));
+	}
+	
+	public void ExpandAsymS2P3() {
+		final Polynom pR12 = parser.Parse("R1+R2", "S");
+		final Polynom p1 = math.Replace(
+				parser.Parse("-S^6 - 2*b*S^4 + 8*b^2*S^2 - 10*b*R12*S + 2*R12^2", "S"),
+				"R12", pR12);
+		final Polynom pMult = parser.Parse("2*S^3 - 4*b*S + R1 + R2", "S");
+		final Polynom p2 = math.Replace(
+				parser.Parse("7*R12*S^6 - 14*b*R12*S^4", "S"),
+				"R12", pR12);
+		final Polynom p3 = parser.Parse("-10*R1^2*S^3 - 10*R2^2*S^3 + 34*R1*R2*S^3", "S");
+		//
+		Polynom pR = math.Mult(p1, pMult);
+		pR = math.Add(pR, p2);
+		pR = math.Add(pR, p3);
+		pR = math.Mult(pR, 1, -2);
+		//
+		display.Display(polyFact.ToSeq(pR, "S"));
+		
+		//
+		final Polynom pDiv = parser.Parse("xy^2 + 2*b*xy + b^2", "xy");
+		final Polynom pS1 = parser.Parse("-3*xy*S + S^3 + b*S - R1 - R2", "S");
+		final Polynom pS2 =
+				parser.Parse("xy^3 - b*xy*S^2 - b^2*S^2 + b*R1*S + b*R2*S + 2*b*xy^2 + b^2*xy - R1*R2", "S");
+		pR = polyFact.ClassicPolynomial(pS2, pS1, pDiv, "S");
+		display.Display(polyFact.ToSeq(pR, "xy"));
+	}
+	
+	public void ExpandAsymCoeffS2P2() {
+		final Polynom pS1 = parser.Parse("S^3 - 3*xy*S + b1*xy + b2*xy - R*S", "S");
+		final Polynom pS2 = parser.Parse("R*S^2 - xy^2 - 2*R*xy + b1*b2*xy - R^2", "S");
+		final Polynom pDiv = parser.Parse("S^2 - R", "S");
+		Polynom pR = polyFact.ClassicPolynomial(pS2, pS1, pDiv, "xy");
+		pR = math.Mult(pR, -1);
+		display.Display(polyFact.ToSeq(pR, "S"));
+	}
+	
+	public void ExpandAsymCoeffS2P3() {
+		final Polynom pS1 = parser.Parse("S^4 - 4*xy*S^2 + 2*xy^2 + b1*xy + b2*xy - R*S", "S");
+		final Polynom pS2 = parser.Parse("R*S^3 - xy^3 - 3*R*S*xy + b1*b2*xy - R^2", "S");
+		final Polynom pDiv = parser.Parse("S^3 - R", "S");
+		Polynom pR = polyFact.ClassicPolynomial(pS1, pS2, pDiv, "xy");
+		pR = math.Mult(pR, 1, 4);
+		display.Display(polyFact.ToSeq(pR, "S"));
+
+		final Polynom pSp1 = parser.Parse("S^4 - 4*xy*S^2 + 2*xy^2 - R*S", "S");
+		final Polynom pSp2 = parser.Parse("S^5 - 4*xy*S^3 + 3*xy^2*S - 2*R*S^2 + b1^2*S + 2*R*xy", "S");
+		final Polynom pSpDiv = parser.Parse("S", "S");
+		pR = polyFact.ClassicPolynomial(pSp1, pSp2, pSpDiv, "xy");
+		pR = math.Mult(pR, 1, 2);
+		display.Display(polyFact.ToSeq(pR, "S"));
+	}
+	
+	public void HtS3P2() {
+		final Polynom pSp1 = parser.Parse("S^4 + 2*b1*S^3 - 10*R*S^2 - b1^2*S^2 +"
+				+ "6*b1*R*S + 6*b1^3*S - 18*b1^2*R + 9*R^2", "S");
+		final Polynom pDiv = parser.Parse("S^2 + 3*b1*S - 9*R", "S");
+		Polynom pR = math.Div(pSp1, pDiv).key;
+		display.Display("\nS3P2: Ht");
+		display.Display(polyFact.ToSeq(pR, "S"));
+	}
+	
+	public void ClassicHtMixt21S2P2() {
+		final Polynom p1 = parser.Parse("x^2*y + b3*x*y + b2*x^2 + b1*x - R", "x");
+		final Polynom p2 = parser.Parse("y^2*x + b3*x*y + b2*y^2 + b1*y - R", "x");
+		final Polynom pDiv = parser.Parse("x^3 + b3*x^2 + b2*x^2 + b1*x - R", "x");
+		Polynom pR = polyFact.ClassicPolynomial(p2, p1, pDiv, "y");
+		pR = math.Mult(pR, 1, 1);
+		display.Display(polyFact.ToSeq(pR, "x"));
+	}
+	
+	public void ClassicHtMixt31S2P2() {
+		final Polynom p1 = parser.Parse("x^3*y + b3*x^2*y^2 + b2*x*y + b1*y - R", "x");
+		final Polynom p2 = parser.Parse("y^3*x + b3*x^2*y^2 + b2*x*y + b1*x - R", "x");
+		final Polynom pDiv = parser.Parse("x^4 + b3*x^4 + b2*x^2 + b1*x - R", "x");
+		display.Display("\nStarting Classic Polynomial:");
+		Polynom pR = polyFact.ClassicPolynomial(p2, p1, pDiv, "y");
+		pR = math.Mult(pR, 1, 1);
+		display.Display(polyFact.ToSeq(pR, "x"));
+		display.Display("Size = " + pR.size());
+		if(true) return;
+		//
+		final String [] ssP = new String [] {"b1*b3^4 - 2*b1*b3^2 + b1",
+				"- R*b3^4 + 2*R*b3^2 - R",
+				"3*b1*b2 - 4*b1*b2*b3^2 + b1*b2*b3^4",
+				"3*b1^2 - 5*b1^2*b3^2 - b1^2*b3^3 + 2*b1^2*b3^4 + b1^2*b3^5 + 2*R*b2*b3^2 - 2*R*b2", // x^7
+				"-3*b1*R + 3*b1*b2^2 + 3*R*b1*b3 + 5*R*b1*b3^2 -3*b1*b2^2*b3^2 -3*R*b1*b3^3 -2*R*b1*b3^4",
+				"6*b1^2*b2 -1*R*b2^2 -2*R^2*b3 -7*b1^2*b2*b3^2 + 1*R*b2^2*b3^2 + 2*R^2*b3^3 + 1*b1^2*b2*b3^4",
+				"3*b1^3 - 4*R*b1*b2 + 1*b1*b2^3 + 3*R*b1*b2*b3 - 4*b1^3*b3^2 + 4*R*b1*b2*b3^2"
+				+ "- 1*b1*b2^3*b3^2 - 3*R*b1*b2*b3^3 + 1*b1^3*b3^4",
+				"-3*R*b1^2 + 3*b1^2*b2^2 + 3*R*b1^2*b3^1 + 4*R*b1^2*b3^2 - 3*b1^2*b2^2*b3^2 - 3*R*b1^2*b3^3 - R*b1^2*b3^4",
+				"3*b1^3*b2 - 1*R*b1*b2^2 - 2*R^2*b1*b3 - 3*b1^3*b2*b3^2 + 1*R*b1*b2^2*b3^2 + 2*R^2*b1*b3^3",
+				"R^3 + 1*b1^4 - 2*R*b1^2*b2 - R^3*b3^2 - 1*b1^4*b3^2 + 2*R*b1^2*b2^1*b3^2",
+				"-R*b1^3 + R*b1^3*b3^2"};
+		final Polynom pCl = polyFact.Create(parser.Parse(ssP, "x"), "x", true);
+		pR = math.Div(pCl, pDiv).key;
+		display.Display(polyFact.ToSeq(pR, "x"));
 	}
 }

@@ -60,7 +60,7 @@ public class Polynom extends TreeMap<Monom, Double> {
 		this(p, p.sRootName);
 	}
 	public Polynom(final Polynom p, final String sRootName) {
-		this(p.sRootName);
+		this(sRootName); // TODO: verify consequences: was wrongly set to: p.sRootName!
 		for(final Map.Entry<Monom, Double> entry : p.entrySet()) {
 			// assumes Polynom p is well formed
 			this.Add(new Monom(entry.getKey()), entry.getValue());

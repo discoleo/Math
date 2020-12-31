@@ -9,6 +9,7 @@
 package math;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import data.Monom;
@@ -161,6 +162,19 @@ public class MathTools {
 		}
 		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
 			final double dRez = entry.getValue() * iM / iD;
+			pM.put(entry.getKey(), dRez);
+		}
+		return pM;
+	}
+	public Polynom Mult(final Polynom p1, final double dM, final double dD) {
+		// polynomial multiplication and division with a scalar;
+		// use MultInPlace() for in-place multiplication;
+		final Polynom pM = new Polynom(p1.sRootName);
+		if(dM == 0) {
+			return pM;
+		}
+		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
+			final double dRez = entry.getValue() * dM / dD;
 			pM.put(entry.getKey(), dRez);
 		}
 		return pM;
@@ -323,6 +337,88 @@ public class MathTools {
 		}
 		return mR;
 	}
+	public TreeMap<String, Pair<Integer, Integer>> CountMaxPows(final Polynom p) {
+		final TreeMap<String, Pair<Integer, Integer>> mapCount = new TreeMap<> ();
+		
+		for(final Monom m : p.keySet()) {
+			for(final Map.Entry<String, Integer> entryVars : m.entrySet()) {
+				final Pair<Integer, Integer> countPow = mapCount.get(entryVars.getKey());
+				if(countPow == null) {
+					final Pair<Integer, Integer> countPowNew = new Pair<> (entryVars.getValue(), 1);
+					mapCount.put(entryVars.getKey(), countPowNew);
+				} else {
+					if(countPow.key == entryVars.getValue()) {
+						countPow.val ++;
+					} else if(countPow.key < entryVars.getValue()) {
+						countPow.key = entryVars.getValue();
+						countPow.val = 1; // first count
+					}
+				}
+			}
+		}
+		return mapCount;
+	}
+	final String UniqueVar(final TreeMap<String, Pair<Integer, Integer>> mapCount) {
+		for(final Map.Entry<String, Pair<Integer, Integer>> entryVars : mapCount.entrySet()) {
+			if(entryVars.getValue().val == 1) {
+				// 1st Var with Count == 1
+				return entryVars.getKey();
+			}
+		}
+		System.out.println("Error: NO unique Var!");
+		return null;
+	}
+	public Pair<Polynom, Polynom> DivRobust(final Polynom p1, final Polynom pDiv) {
+		final String sVarDiv = pDiv.sRootName;
+		final int maxPow = this.MaxPow(pDiv, sVarDiv);
+		if(maxPow == 0) return null; // Error: cannot divide!
+		// sVarDiv is removed!
+		final Polynom pMaxDiv = this.ExtractMonoms(pDiv, sVarDiv, maxPow);
+		if(pMaxDiv.size() == 1) {
+			// simple Division works;
+			return this.Div(p1, pDiv);
+		}
+		// new Div Var:
+		final TreeMap<String, Pair<Integer, Integer>> mapCount = this.CountMaxPows(pMaxDiv);
+		final String sVarDiv2 = this.UniqueVar(mapCount);
+		System.out.println("Suppl Var = " + sVarDiv2);
+		final Polynom pMaxDivVar = new Polynom(pMaxDiv, sVarDiv2);
+		// TODO: sVarDiv2 == null!
+		// final Monom mDiv = this.ExtractMonom(pMaxDiv, sVarDiv2, mapCount.get(sVarDiv2).key);
+		// final double dDiv = pMaxDiv.get(mDiv);
+		
+		// init Result
+		Polynom pRemain = new Polynom(p1, pDiv.sRootName);
+		Polynom pRez = new Polynom(p1.sRootName);
+		
+		while(pRemain.size() > 0) {
+			System.out.println(pRemain.size());
+			final int maxPowRemain = this.MaxPow(pRemain, sVarDiv);
+			if(maxPowRemain < maxPow) {
+				System.out.println("Error: NOT divisible! Remaining Pow < maxPow: " + maxPowRemain);
+				return new Pair<> (pRez, pRemain); // TODO: more advanced
+			}
+			final Polynom pTop = this.ExtractMonoms(pRemain, sVarDiv, maxPowRemain);
+			// final Polynom pRemainAtLevel = this.DivAbs(pTop, mDiv);
+			final Polynom pRemainAtLevel = this.DivRobust(pTop, pMaxDivVar).key;
+			if(pRemainAtLevel == null) {
+				System.out.println("Error: NOT divisible!");
+				return new Pair<> (pRez, pRemain); // TODO: more advanced
+			}
+			// add back primary Variable
+			final Polynom pRemainAtLevelCorrected;
+			if(maxPowRemain > maxPow) {
+				pRemainAtLevelCorrected = this.Mult(pRemainAtLevel, new Monom(sVarDiv, maxPowRemain - maxPow));
+			} else {
+				pRemainAtLevelCorrected = pRemainAtLevel;
+			}
+			pRez = this.Add(pRez, this.Mult(pRemainAtLevelCorrected, 1, 1));
+			// remove Monoms that matched
+			pRemain = this.Add(pRemain,
+					this.MultInPlace(this.Mult(pRemainAtLevelCorrected, pDiv), -1, 1.0d));
+		}
+		return new Pair<> (pRez, pRemain);
+	}
 	public Pair<Polynom, Polynom> Div(final Polynom p1, final Polynom pDiv) {
 		// "agile" implementation of a very simple division
 		Polynom pRemain = new Polynom(p1, pDiv.sRootName);
@@ -335,6 +431,7 @@ public class MathTools {
 		while(pRemain.size() > 0) {
 			// final Map.Entry<Monom, Double> entryP = pRemain.lastEntry();
 			// Monom mTop = entryP.getKey();
+			System.out.println(pRemain.size());
 			Monom mTop = this.Largest(pRemain, mDiv, pDiv.sRootName);
 			final double dPVal;
 			if(mTop != null) {
@@ -1449,7 +1546,17 @@ public class MathTools {
 		}
 		return dCoeffCommon;
 	}
-	
+
+	public Monom ExtractMonom(final Polynom p, final String sVar, final int iPow) {
+		// extracts the 1st Monom that has sVar^iPow;
+		for(final Monom m : p.keySet()) {
+			final Integer powM = m.get(sVar);
+			if(powM == null) continue;
+			if(powM != iPow) continue;
+			return m;
+		}
+		return null;
+	}
 	public Polynom ExtractMonoms(final Polynom p, final String sVar, final int iPow) {
 		// extracts only Monoms that have sVar^iPow;
 		// removes sVar;

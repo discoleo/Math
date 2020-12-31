@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Vector;
 
 import data.Monom;
+import data.Pair;
 import data.PolyResult;
 import data.PolySeq;
 import data.Polynom;
@@ -82,6 +83,21 @@ public class PolyFactory extends BaseFactory {
 
 		return new PolyResult(polyRez,
 				polynomRoot, null, nOrder); // TODO
+	}
+	
+	public Polynom Create(final Polynom [] p, final String sVar, final boolean isDesc) {
+		Polynom pR = new Polynom(sVar);
+		
+		for(int i=0; i < p.length; i++) {
+			final int iPow = isDesc ? p.length - i - 1 : i;
+			if(iPow != 0) {
+				pR = math.Add(pR, math.Mult(p[i], new Monom(sVar, iPow)));
+			} else {
+				pR = math.Add(pR, p[i]);
+			}
+		}
+		
+		return pR;
 	}
 	
 	public Polynom CreateSimple(final int nOrder, final String sVar, final String sCoeff,
@@ -171,13 +187,16 @@ public class PolyFactory extends BaseFactory {
 			mDiv.Add("pDivInv", 1);
 			pR = math.Replace(pR, mDiv, "Identity");
 			pR = math.Replace(pR, "Identity", 1, 1);
-			System.out.println("\nDIV routine:\n" + pR.toString());
-			System.out.println("\nDIV routine:\n" + pDivY.toString());
+			System.out.println("\nDIV routine: R\n" + pR.toString());
+			System.out.println("\nDIV routine: Div\n" + pDivY.toString());
 			pR = math.Replace(pR, "pDivInv", pDivY);
+			System.out.println("\nFinished replacement.\n");
 		}
 
 		if(pDiv != null) {
-			pR = math.Div(pR, pDiv).key;
+			final Pair<Polynom, Polynom> pdDiv = math.DivRobust(pR, pDiv);
+			pR = pdDiv.key;
+			System.out.println(pdDiv.val.toString());
 		}
 		return pR;
 	}

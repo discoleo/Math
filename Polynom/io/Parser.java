@@ -25,6 +25,16 @@ public class Parser {
 		VAR, VAR_NUM, VAR_END,
 		MULT, POW, POW_NUM, POW_NEG;
 	}
+	
+	public Polynom [] Parse(final String [] sP, final String sVar) {
+		final Polynom [] pR = new Polynom [sP.length];
+		
+		for(int i=0; i < sP.length; i++) {
+			pR[i] = this.Parse(sP[i], sVar);
+		}
+		
+		return pR;
+	}
 
 	public Polynom Parse(final String sInput, final String sVar) {
 		final SIterator it = new SIterator(sInput, 0);

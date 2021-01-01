@@ -369,14 +369,19 @@ public class MathTools {
 		return null;
 	}
 	public Pair<Polynom, Polynom> DivRobust(final Polynom p1, final Polynom pDiv) {
+		return this.DivRobust(p1, pDiv, false);
+	}
+	public Pair<Polynom, Polynom> DivRobust(final Polynom p1, final Polynom pDiv, final boolean isRobust) {
+		// TODO:
+		// robust Diagnostics for robust Division;
 		final String sVarDiv = pDiv.sRootName;
 		final int maxPow = this.MaxPow(pDiv, sVarDiv);
 		if(maxPow == 0) return null; // Error: cannot divide!
 		// sVarDiv is removed!
 		final Polynom pMaxDiv = this.ExtractMonoms(pDiv, sVarDiv, maxPow);
-		if(pMaxDiv.size() == 1) {
+		if( ! isRobust && pMaxDiv.size() == 1) {
 			// simple Division works;
-			return this.Div(p1, pDiv);
+			return this.Div(p1, pDiv, true);
 		}
 		// new Div Var:
 		final TreeMap<String, Pair<Integer, Integer>> mapCount = this.CountMaxPows(pMaxDiv);
@@ -390,19 +395,21 @@ public class MathTools {
 		// init Result
 		Polynom pRemain = new Polynom(p1, pDiv.sRootName);
 		Polynom pRez = new Polynom(p1.sRootName);
-		
+		// int count = 0;
 		while(pRemain.size() > 0) {
 			System.out.println(pRemain.size());
+			// if(count ++ > 3) return null;
 			final int maxPowRemain = this.MaxPow(pRemain, sVarDiv);
 			if(maxPowRemain < maxPow) {
 				System.out.println("Error: NOT divisible! Remaining Pow < maxPow: " + maxPowRemain);
 				return new Pair<> (pRez, pRemain); // TODO: more advanced
 			}
 			final Polynom pTop = this.ExtractMonoms(pRemain, sVarDiv, maxPowRemain);
-			// final Polynom pRemainAtLevel = this.DivAbs(pTop, mDiv);
-			final Polynom pRemainAtLevel = this.DivRobust(pTop, pMaxDivVar).key;
+			// TODO: fails in UniqueVar;
+			// final Polynom pRemainAtLevel = this.DivRobust(pTop, pMaxDivVar, true).key;
+			final Polynom pRemainAtLevel = this.DivRobust(pTop, pMaxDivVar, false).key;
 			if(pRemainAtLevel == null) {
-				System.out.println("Error: NOT divisible!");
+				System.out.println("Error: NOT divisible!\n");
 				return new Pair<> (pRez, pRemain); // TODO: more advanced
 			}
 			// add back primary Variable
@@ -420,6 +427,9 @@ public class MathTools {
 		return new Pair<> (pRez, pRemain);
 	}
 	public Pair<Polynom, Polynom> Div(final Polynom p1, final Polynom pDiv) {
+		return this.Div(p1, pDiv, false);
+	}
+	public Pair<Polynom, Polynom> Div(final Polynom p1, final Polynom pDiv, final boolean isRecursive) {
 		// "agile" implementation of a very simple division
 		Polynom pRemain = new Polynom(p1, pDiv.sRootName);
 		Polynom pRez = new Polynom(p1.sRootName);
@@ -427,6 +437,7 @@ public class MathTools {
 		final Map.Entry<Monom, Double> entryDiv = pDiv.lastEntry();
 		final Monom mDiv = entryDiv.getKey(); // top Monom
 		final double dDiv = entryDiv.getValue();
+		System.out.println("mDiv: " + mDiv.toString());
 		
 		while(pRemain.size() > 0) {
 			// final Map.Entry<Monom, Double> entryP = pRemain.lastEntry();
@@ -439,7 +450,12 @@ public class MathTools {
 				mTop = this.DivAbs(mTop, mDiv);
 			} else dPVal = 0;
 			if(mTop == null) {
-				System.out.println("Error: NOT divisible!");
+				System.out.println("Error: NOT divisible! [Simple Div]");
+				if(isRecursive) {
+					System.out.println(pRemain.toString());
+					System.out.println(p1.toString());
+					return new Pair<> (null, pRemain);
+				}
 				return new Pair<> (pRez, pRemain); // TODO: more advanced
 			}
 			// final double dVal = entryP.getValue() / dDiv;
@@ -1564,6 +1580,7 @@ public class MathTools {
 		
 		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
 			final Integer powM = entryM.getKey().get(sVar);
+			// currently fails when iPow == 0;
 			if(powM == null) continue;
 			if(powM != iPow) continue;
 			final Monom m = new Monom(entryM.getKey());

@@ -454,12 +454,13 @@ public class TestSystems {
 		final Polynom p1 = parser.Parse("x^3*y + b3*x^2*y^2 + b2*x*y + b1*y - R", "x");
 		final Polynom p2 = parser.Parse("y^3*x + b3*x^2*y^2 + b2*x*y + b1*x - R", "x");
 		final Polynom pDiv = parser.Parse("x^4 + b3*x^4 + b2*x^2 + b1*x - R", "x");
+		final Polynom pMult = parser.Parse("b3^2 - 1", "x");
 		display.Display("\nStarting Classic Polynomial:");
 		Polynom pR = polyFact.ClassicPolynomial(p2, p1, pDiv, "y");
 		pR = math.Mult(pR, 1, 1);
 		display.Display(polyFact.ToSeq(pR, "x"));
 		display.Display("Size = " + pR.size());
-		if(true) return;
+		// if(true) return;
 		//
 		final String [] ssP = new String [] {"b1*b3^4 - 2*b1*b3^2 + b1",
 				"- R*b3^4 + 2*R*b3^2 - R",
@@ -473,8 +474,10 @@ public class TestSystems {
 				"3*b1^3*b2 - 1*R*b1*b2^2 - 2*R^2*b1*b3 - 3*b1^3*b2*b3^2 + 1*R*b1*b2^2*b3^2 + 2*R^2*b1*b3^3",
 				"R^3 + 1*b1^4 - 2*R*b1^2*b2 - R^3*b3^2 - 1*b1^4*b3^2 + 2*R*b1^2*b2^1*b3^2",
 				"-R*b1^3 + R*b1^3*b3^2"};
-		final Polynom pCl = polyFact.Create(parser.Parse(ssP, "x"), "x", true);
-		pR = math.Div(pCl, pDiv).key;
+		final Polynom pCl = math.DivRobust(
+				polyFact.Create(parser.Parse(ssP, "x"), "x", true), pDiv).key;
+		display.Display(polyFact.ToSeq(pCl, "x"));
+		pR = math.DivRobust(math.Mult(pR, pMult), pCl).key;
 		display.Display(polyFact.ToSeq(pR, "x"));
 	}
 }

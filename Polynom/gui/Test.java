@@ -32,6 +32,10 @@ public class Test extends BaseGui {
 		// Poly Systems
 		new TestSystems(this.parser, this.math, this.polyFact, this.testClass1)
 			.Test();
+		
+		// generate Polys for ODEs
+		new TestODEPolys(this.parser, this.math, this.polyFact, this.testClass1)
+			.Test();
 	}
 	
 	public Polynom Start() {

@@ -201,6 +201,10 @@ public class PolyFactory extends BaseFactory {
 		return pR;
 	}
 	public Polynom ClassicPolynomial(final Polynom [] p, final Polynom pDiv, final String [] sVar) {
+		return this.ClassicPolynomial(p, pDiv, sVar, null);
+	}
+	public Polynom ClassicPolynomial(final Polynom [] p, final Polynom pDiv, final String [] sVar,
+			final Polynom [] pReduce) {
 		final String sVarDiv = "pDiv";
 		final Monom mDiv = new Monom(sVarDiv, 1);
 		final Monom mIdent = new Monom(mDiv).Add("pDivInv", 1);
@@ -209,10 +213,28 @@ public class PolyFactory extends BaseFactory {
 			if(sVar[id] == null) { continue; }
 			Polynom pR = math.GcdExtract(p[id], p[id + 1], sVar[id]);
 			final PolySeq seq = this.ToSeq(pR, sVar[id]);
+			// final PolySeq seq;
+			// if(id == p.length - 3) seq = math.Mult(this.ToSeq(pR, sVar[id]), 1, 32);
+			// else seq = this.ToSeq(pR, sVar[id]);
 			// Debug
-			// this.Display("Polynoms:");
-			// this.Display(p[id]);
+			this.Display("Polynoms: p" + id);
+			this.Display(p[id]);
+			final int iGcd = math.GcdNum(seq);
+			if(iGcd > 1) {
+				math.DivInPlace(seq, iGcd);
+			}
+			// this.Display("GCD = " + iGcd);
 			// this.Display(p[id+1]);
+			this.Display(seq);
+			if(pReduce != null && pReduce[id] != null) {
+				final Pair<Polynom, Polynom> ppDiv1 = math.Div(seq.get(0), pReduce[id]);
+				this.Display("Div Reduce:\n" + ppDiv1.val.toString());
+				seq.put(0, ppDiv1.key);
+				final Pair<Polynom, Polynom> ppDiv2 = math.Div(seq.get(1), pReduce[id]);
+				this.Display("Div Reduce:\n" + ppDiv2.val.toString());
+				seq.put(1, ppDiv2.key);
+				this.Display(seq);
+			}
 			
 			final Polynom pY = math.Mult(math.Mult(seq.get(0), mDiv), -1);
 			final Polynom pDivY = seq.get(1);
@@ -227,7 +249,7 @@ public class PolyFactory extends BaseFactory {
 					// System.out.println("\nDIV routine: Div\n" + pDivY.toString());
 					pR = math.Replace(pR, "pDivInv", pDivY);
 				}
-				p[idAll] = pR;
+				p[idAll] = math.Simplify(pR); // pR;
 			}
 		}
 

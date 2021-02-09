@@ -14,6 +14,7 @@ import java.util.Vector;
 
 import data.Monom;
 import data.Pair;
+import data.PolySeq;
 import data.Polynom;
 import data.PowGrade;
 import data.Unity;
@@ -179,6 +180,17 @@ public class MathTools {
 		}
 		return pM;
 	}
+	public PolySeq Mult(final PolySeq seq, final double dM, final double dD) {
+		final PolySeq seqNew = new PolySeq(seq.GetVar());
+		if(dM == 0) {
+			return seqNew;
+		}
+		for(final Map.Entry<Integer, Polynom> entry : seq.entrySet()) {
+			seqNew.put(entry.getKey(), this.Mult(entry.getValue(), dM, dD));
+		}
+		return seqNew;
+	}
+	
 	// +++ Multiply Polynomial with a Monome
 	public Polynom MultInPlace(final Polynom p1, final int iM) {
 		for(final Map.Entry<Monom, Double> entry : p1.entrySet()) {
@@ -194,6 +206,15 @@ public class MathTools {
 	}
 	public Polynom Mult(final Polynom p1, final Monom m2, final double dCoeff) {
 		return this.Mult(p1, new Polynom(m2, dCoeff, p1.sRootName));
+	}
+	public Polynom Mult(final Polynom [] pp) {
+		if(pp.length == 1) return new Polynom(pp[0]);
+		Polynom pR = null;
+		for(final Polynom p : pp) {
+			if(pR == null) { pR = new Polynom(p); continue; }
+			pR = this.Mult(pR, p);
+		}
+		return pR;
 	}
 	public Polynom Mult(final Polynom p1, final Polynom p2) {
 		// multiplicarea celor 2 polinoame
@@ -263,6 +284,19 @@ public class MathTools {
 		return mRez;
 	}
 	
+	public void DivInPlace(final PolySeq seq, final int iDiv) {
+		final Iterator<Map.Entry<Integer, Polynom>> it = seq.entrySet().iterator();
+		while(it.hasNext()) {
+			final Map.Entry<Integer, Polynom> entry = it.next();
+			seq.replace(entry.getKey(), this.Mult(entry.getValue(), 1, iDiv));
+		}
+	}
+	public Polynom Simplify(final Polynom p) {
+		final int iGcd = this.GcdNum(p, 0);
+		if(iGcd <= 1) return p;
+		return this.Mult(p, 1, iGcd);
+	}
+	
 	public Monom Div(final Monom m1, final Monom m2) {
 		final Monom mRez = new Monom(m1);
 		if(m2.size() == 0) {
@@ -287,6 +321,7 @@ public class MathTools {
 
 	public Polynom DivAbs(final Polynom p1, final Monom mDiv) {
 		// mDiv *MUST* divide all monomials;
+		if(mDiv.size() == 0) return new Polynom(p1);
 		Polynom pR = new Polynom(p1.sRootName);
 		for(final Map.Entry<Monom, Double> entryP : p1.entrySet()) {
 			final Monom mRDiv = DivAbs(entryP.getKey(), mDiv);
@@ -431,6 +466,12 @@ public class MathTools {
 	}
 	public Pair<Polynom, Polynom> Div(final Polynom p1, final Polynom pDiv, final boolean isRecursive) {
 		// "agile" implementation of a very simple division
+		if(pDiv.size() == 1) {
+			final Map.Entry<Monom, Double> m = pDiv.firstEntry();
+			return new Pair<> (
+					this.Mult(
+					this.DivAbs(p1, m.getKey()), 1, m.getValue()), new Polynom());
+		}
 		Polynom pRemain = new Polynom(p1, pDiv.sRootName);
 		Polynom pRez = new Polynom(p1.sRootName);
 		
@@ -579,6 +620,42 @@ public class MathTools {
 		
 		return pDiv;
 	}
+	public int GcdNum(final PolySeq seq) {
+		int iGcd = 0;
+		System.out.println("Starting GCD");
+		for(final Polynom p : seq.values()) {
+			iGcd = this.GcdNum(p, iGcd);
+			if(iGcd == 1) return 1;
+			System.out.println("GCD = " + iGcd);
+		}
+		return iGcd;
+	}
+	public int GcdNum(final Polynom p1, final Polynom p2) {
+		int iGcd = 0;
+		iGcd = this.GcdNum(p1, iGcd);
+		iGcd = this.GcdNum(p2, iGcd);
+		return iGcd;
+	}
+	public int GcdNum(final Polynom p, int iGcd) {
+		for(final double dCoeff : p.values()) {
+			final int iCoeff = (int) dCoeff;
+			if(iCoeff != dCoeff) return 1;
+			iGcd = this.Gcd(Math.abs(iCoeff), iGcd);
+		}
+		return iGcd;
+	}
+	public int Gcd(int i1, int i2) {
+		if(i1 < i2) return this.Gcd(i2, i1);
+		if(i2 == 0) return i1;
+		if(i2 == 1) return 1;
+		//
+		while(true) {
+			while(i1 >= i2) i1 -= i2;
+			if(i1 == 0) return i2;
+			if(i1 == 1) return 1;
+			final int tmp = i1; i1 = i2; i2 = tmp;
+		}
+	}
 
 	public Polynom GcdExtract(final Polynom p1, final Polynom p2, final String sVar) {
 		return this.GcdExtract(p1, p2, sVar, true);
@@ -596,6 +673,7 @@ public class MathTools {
 		}
 		
 		// int count = 0;
+		int lastPow = -1;
 		while(true) {
 			if(iPow1 <= 1) return pSm;
 			if(iPow2 <= 1) return pGr;
@@ -617,13 +695,20 @@ public class MathTools {
 			final int iPowR = this.MaxPow(pR, sVar);
 			if(iPowR <= 1) return pR;
 			if(iPowR <= iPow1) {
-				pGr = pSm; pSm = pR;
-				iPow2 = iPow1; iPow1 = iPowR;
+				if(iPowR != lastPow) {
+					pGr = pSm; pSm = pR;
+					iPow2 = iPow1; iPow1 = iPowR;
+					lastPow = iPowR;
+				} else {
+					pGr = pR;
+					iPow2 = iPowR;
+					lastPow = iPowR;
+				}
 				System.out.println("Smaller: " + iPowR + ", Size = " + pR.size());
 				// System.out.println(pR.toString());
 				// count ++;
 				// if(count >= 3) return pR;
-			} else if(iPowR < iPow2) {
+			} else if(iPowR <= iPow2) {
 				pGr = pR;
 				iPow2 = iPowR;
 				System.out.println("Intermediate: " + iPowR);
@@ -1586,6 +1671,19 @@ public class MathTools {
 			final Monom m = new Monom(entryM.getKey());
 			m.remove(sVar);
 			pR.Add(m, entryM.getValue());
+		}
+		
+		return pR;
+	}
+	public Polynom ExtractMonoms(final Polynom p, final Monom m) {
+		// extracts only Monoms that have m (including the powers in m);
+		// removes sVar;
+		final Polynom pR = new Polynom(p.sRootName);
+		
+		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+			final Monom mR = this.DivExact(entryM.getKey(), m);
+			if(mR == null) continue;
+			pR.Add(mR, entryM.getValue());
 		}
 		
 		return pR;

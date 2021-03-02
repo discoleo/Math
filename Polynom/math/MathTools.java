@@ -201,8 +201,8 @@ public class MathTools {
 	}
 	
 	// +++ Multiply 2 Polynomials
-	public Polynom Mult(final Polynom p1, final Monom m2) {
-		return this.Mult(p1, new Polynom(m2, 1, p1.sRootName));
+	public Polynom Mult(final Polynom p1, final Monom m) {
+		return this.Mult(p1, new Polynom(m, 1, p1.sRootName));
 	}
 	public Polynom Mult(final Polynom p1, final Monom m2, final double dCoeff) {
 		return this.Mult(p1, new Polynom(m2, dCoeff, p1.sRootName));
@@ -263,6 +263,20 @@ public class MathTools {
 		}
 
 		return mRez;
+	}
+	
+	public Polynom MultVar(final Polynom p, final String sVar, final int iVal) {
+		// replace sVar by iVal * sVar
+		final Polynom pM = new Polynom(p.sRootName);
+		for(final Map.Entry<Monom, Double> entryP1 : p.entrySet()) {
+			final Integer iPow = entryP1.getKey().get(sVar);
+			if(iPow == null) {
+				pM.Add(entryP1.getKey(), entryP1.getValue());
+				continue;
+			}
+			pM.Add(entryP1.getKey(), entryP1.getValue() * this.Pow(iVal, iPow)); // TODO: Dict of powers;
+		}
+		return pM;
 	}
 	
 	public Polynom DotProd(final Polynom [] pp1, final Polynom [] pp2) {
@@ -667,7 +681,7 @@ public class MathTools {
 		
 		int iPow1 = this.MaxPow(pSm, sVar);
 		int iPow2 = this.MaxPow(pGr, sVar);
-		if(iPow1 > iPow2) {
+		if(iPow1 > iPow2 && iPow2 > 0) {
 			final Polynom pTmp = pSm; pSm = pGr; pGr = pTmp;
 			final int iTmp = iPow1; iPow1 = iPow2; iPow2 = iTmp;
 		}

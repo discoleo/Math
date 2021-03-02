@@ -247,7 +247,11 @@ public class PolyFactory extends BaseFactory {
 					pR = math.Replace(pR, "Identity", 1, 1);
 					// System.out.println("\nDIV routine: R\n" + pR.toString());
 					// System.out.println("\nDIV routine: Div\n" + pDivY.toString());
-					pR = math.Replace(pR, "pDivInv", pDivY);
+					if(pDivY != null) {
+						pR = math.Replace(pR, "pDivInv", pDivY);
+					} else {
+						System.out.println("\nDIV routine: Div == NULL\n");
+					}
 				}
 				p[idAll] = math.Simplify(pR); // pR;
 			}

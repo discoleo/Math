@@ -1,6 +1,7 @@
 package math;
 
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import data.Monom;
@@ -19,6 +20,29 @@ public class PolyFactory extends BaseFactory {
 	}
 	
 	// +++++++++ MEMBER FUNCTIONS ++++++++++
+	
+	public Polynom [] Cycle(final Polynom p, final String [] sVars) {
+		final Polynom [] pAll = new Polynom [sVars.length];
+		pAll[0] = p;
+		
+		for(int id=1; id < sVars.length; id++) {
+			pAll[id] = new Polynom(p.sRootName);
+			for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+				final Monom m = new Monom(entryM.getKey());
+				for(int id0 = 0; id0 < sVars.length; id0++) {
+					final int idNew = (id0 + id) % sVars.length;
+					final Integer iPow = entryM.getKey().get(sVars[id0]);
+					if(iPow != null && iPow != 0) {
+						m.Put(sVars[idNew], iPow);
+					} else {
+						m.remove(sVars[idNew]);
+					}
+				}
+				pAll[id].Add(m, entryM.getValue());
+			}
+		}
+		return pAll;
+	}
 
 	public PolyResult Create(final Polynom pBase, final int nOrder) {
 		return this.Create(pBase, nOrder, "x");
@@ -152,7 +176,12 @@ public class PolyFactory extends BaseFactory {
 	}
 	
 	public void Display(final PolySeq seq) {
-		System.out.println(seq.toString());
+		if(seq.size() != 2) {
+			System.out.println(seq.toString());
+		} else {
+			System.out.println(seq.get(0).toString());
+			System.out.println(seq.get(1).toString());
+		}
 	}
 	public void Display(final Polynom p) {
 		System.out.println(p.toString());
@@ -205,6 +234,10 @@ public class PolyFactory extends BaseFactory {
 	}
 	public Polynom ClassicPolynomial(final Polynom [] p, final Polynom pDiv, final String [] sVar,
 			final Polynom [] pReduce) {
+		return this.ClassicPolynomial(p, pDiv, sVar, pReduce, false);
+	}
+	public Polynom ClassicPolynomial(final Polynom [] p, final Polynom pDiv, final String [] sVar,
+			final Polynom [] pReduce, final boolean doCoeffs) {
 		final String sVarDiv = "pDiv";
 		final Monom mDiv = new Monom(sVarDiv, 1);
 		final Monom mIdent = new Monom(mDiv).Add("pDivInv", 1);
@@ -234,6 +267,10 @@ public class PolyFactory extends BaseFactory {
 				this.Display("Div Reduce:\n" + ppDiv2.val.toString());
 				seq.put(1, ppDiv2.key);
 				this.Display(seq);
+			}
+			if(doCoeffs) {
+				this.Display(this.Coeffs(seq.get(0), 4));
+				this.Display(this.Coeffs(seq.get(1), 4));
 			}
 			
 			final Polynom pY = math.Mult(math.Mult(seq.get(0), mDiv), -1);
@@ -462,6 +499,73 @@ public class PolyFactory extends BaseFactory {
 				.Add(sVars[0], iPow2);
 		p.Add(m, 1);
 		return p;
+	}
+	
+	public String Coeffs(final Polynom p, int countVars) {
+		final Vector<Double> vCoeffs = new Vector<> ();
+		final TreeMap<String, Integer> dictVars = new TreeMap<> ();
+		final Vector<Vector<Integer>> vPowsPoly = new Vector<> ();
+		
+		for(final Map.Entry<Monom, Double> entryM : p.entrySet()) {
+			vCoeffs.add(entryM.getValue());
+			final Vector<Integer> vPowsMonom = new Vector<> ();
+			vPowsPoly.add(vPowsMonom);
+			for(int i=0; i < countVars; i++) { vPowsMonom.add(0); }
+			
+			for(final Map.Entry<String, Integer> entryV : entryM.getKey().entrySet()) {
+				final Integer idVar = dictVars.get(entryV.getKey());
+				if(idVar == null) {
+					final int idNew = dictVars.size();
+					dictVars.put(entryV.getKey(), idNew);
+					if(dictVars.size() > countVars) {
+						countVars ++;
+						vPowsMonom.add(entryV.getValue()); // power of Var;
+					} else {
+						vPowsMonom.set(idNew, entryV.getValue()); // power of Var;
+					}
+				} else {
+					vPowsMonom.set(idVar, entryV.getValue()); // power of Var;
+				}
+			}
+		}
+
+		final StringBuilder sb = new StringBuilder ();
+		sb.append("coeff = c(");
+		boolean hasNL = false;
+		int lenPrev = 0;
+		for(final Double dCoeff : vCoeffs) {
+			hasNL = false;
+			sb.append(dCoeff).append(", ");
+			if(sb.length() > lenPrev + 60) {
+				sb.delete(sb.length() - 1, sb.length());
+				hasNL = true;
+				sb.append("\n\t");
+				lenPrev = sb.length();
+			}
+		}
+		sb.delete(sb.length() - (hasNL ? 3 : 2), sb.length());
+		sb.append(");\n");
+		// Vars
+		for(final Map.Entry<String, Integer> entryV : dictVars.entrySet()) {
+			sb.append("# ").append(entryV.getKey()).append(" = Col ")
+				.append(entryV.getValue()).append(";\n");
+		}
+		sb.append("m = matrix(c(\n\t");
+		boolean addNL = false;
+		for(final Vector<Integer> vPows : vPowsPoly) {
+			for(final Integer pow : vPows) {
+				sb.append(pow).append(", ");
+			}
+			if(addNL) {
+				sb.delete(sb.length() - 1, sb.length()); // del space;
+				sb.append("\n\t");
+			}
+			addNL = ! addNL;
+		}
+		sb.delete(sb.length() - (addNL ? 2 : 3), sb.length());
+		sb.append("), ncol=").append(dictVars.size()).append(", byrow=TRUE)");
+		
+		return sb.toString();
 	}
 
 	// ++++ helper ++++

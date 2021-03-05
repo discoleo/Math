@@ -45,7 +45,10 @@ public class Monom extends TreeMap<String, Integer> {
 	}
 	public void Put(final String sVar, final Integer iPutere) {
 		// simple Put
-		iPTotala -= super.put(sVar, iPutere);
+		final Integer iPowOld = super.put(sVar, iPutere);
+		if(iPowOld != null) {
+			iPTotala -= iPowOld;
+		}
 		iPTotala += iPutere;
 	}
 	public Monom Add(final Monom m) {

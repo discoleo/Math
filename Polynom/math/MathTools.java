@@ -204,8 +204,8 @@ public class MathTools {
 	public Polynom Mult(final Polynom p1, final Monom m) {
 		return this.Mult(p1, new Polynom(m, 1, p1.sRootName));
 	}
-	public Polynom Mult(final Polynom p1, final Monom m2, final double dCoeff) {
-		return this.Mult(p1, new Polynom(m2, dCoeff, p1.sRootName));
+	public Polynom Mult(final Polynom p1, final Monom m, final double dCoeff) {
+		return this.Mult(p1, new Polynom(m, dCoeff, p1.sRootName));
 	}
 	public Polynom Mult(final Polynom [] pp) {
 		if(pp.length == 1) return new Polynom(pp[0]);

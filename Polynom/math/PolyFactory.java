@@ -5,6 +5,7 @@ import java.util.TreeMap;
 import java.util.Vector;
 
 import data.Monom;
+import data.P2RootObj;
 import data.Pair;
 import data.PolyResult;
 import data.PolySeq;
@@ -20,6 +21,50 @@ public class PolyFactory extends BaseFactory {
 	}
 	
 	// +++++++++ MEMBER FUNCTIONS ++++++++++
+	
+	public Polynom Substitute(final Polynom p, final P2RootObj root, final String sVar, final int iDiv) {
+		final Polynom pR = math.ReplaceOrMult(p, sVar, root.pRoot, root.pCoeff);
+		return this.Square(pR, root.pSqrt, root.sSqrt, iDiv);
+	}
+	public Polynom Square(final Polynom p, final Polynom pSqrt, final String sVar, final int iDiv) {
+		// square a polynomial containing a sqrt;
+		final PolySeq seq = this.ToSeq(p, sVar);
+		Polynom p0 = new Polynom(p.sRootName);
+		Polynom p1 = new Polynom(p.sRootName);
+		for(final Map.Entry<Integer, Polynom> entryP : seq.entrySet()) {
+			if(entryP.getKey() == 0) {
+				p0 = math.Add(p0, entryP.getValue());
+			} else if(entryP.getKey() % 2 == 0) {
+				final int iPowHalf = entryP.getKey() / 2;
+				p0 = math.Add(p0, math.Mult(entryP.getValue(), new Monom(sVar, iPowHalf)));
+			} else if(entryP.getKey() == 1) {
+				p1 = math.Add(p1, entryP.getValue());
+			} else {
+				final int iPowHalf = (entryP.getKey() - 1) / 2;
+				p1 = math.Add(p1, math.Mult(entryP.getValue(), new Monom(sVar, iPowHalf)));
+			}
+		}
+		Polynom pR = math.Mult(math.Pow(p1, 2), pSqrt);
+		pR = math.Diff(pR, math.Pow(p0, 2));
+		final int iGcd = math.GcdNum(pR, 0);
+		this.Display("GCD = " + iGcd);
+		if(iGcd > 1) { pR = math.Mult(pR, 1, iGcd); }
+		pR = math.Replace(pR, sVar, pSqrt);
+		pR = math.Mult(pR, 1, iDiv);
+		return pR;
+	}
+	public P2RootObj SolveP2(final Polynom p, final String sVar) {
+		final PolySeq seq = this.ToSeq(p, sVar);
+		if(seq.lastKey() > 2) { Display("ERROR: NOT an order 2 polynomial!"); }
+		final P2RootObj root = new P2RootObj();
+		root.sSqrt = sVar + "_sq";
+		root.pRoot = math.Add(math.Mult(seq.get(1), -1),
+				new Monom(root.sSqrt, 1), -1);
+		root.pSqrt = math.Diff(math.Pow(seq.get(1), 2),
+				math.Mult(math.Mult(seq.get(0), seq.get(2)), 4));
+		root.pCoeff = math.Mult(seq.get(2), 2);
+		return root;
+	}
 	
 	public Polynom [] Cycle(final Polynom p, final String [] sVars) {
 		final Polynom [] pAll = new Polynom [sVars.length];
@@ -587,5 +632,24 @@ public class PolyFactory extends BaseFactory {
 			}
 		}
 		return polyRational;
+	}
+	
+	public String ToCoeffs(Polynom p) {
+		final Vector<String> vCoeffs = new Vector<>();
+		for(final Map.Entry<Integer, Polynom> entry : this.ToSeq(p, p.sRootName).entrySet()) {
+			while(entry.getKey() > vCoeffs.size()) {
+				vCoeffs.add("0");
+			}
+			vCoeffs.add(entry.getValue().toString());
+		}
+		final StringBuilder sb = new StringBuilder();
+		sb.append("c(");
+		for(int npos = vCoeffs.size() - 1; npos >= 0; npos--) {
+			sb.append(vCoeffs.get(npos)).append(", ");
+		}
+		sb.delete(sb.length() - 2, sb.length());
+		sb.append(")");
+		final String sP = sb.toString();
+		return sP;
 	}
 }

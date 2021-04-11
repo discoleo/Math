@@ -776,6 +776,15 @@ public class MathTools {
 		}
 		return pRez;
 	}
+	public Vector<Polynom> Add(final Vector<Polynom> vP, final Polynom p2) {
+		final Vector<Polynom> vR = new Vector<> ();
+		
+		for(final Polynom p: vP) {
+			vR.add(this.Add(p, p2));
+		}
+		
+		return vR;
+	}
 	public Polynom AddInPlace(final Polynom p1, final Polynom p2Const) {
 		final Iterator<Map.Entry<Monom, Double>> itP2 = p2Const.entrySet().iterator();
 		
@@ -1707,5 +1716,27 @@ public class MathTools {
 			vP.set(id, this.Mult(vP.get(id), iMult));
 		}
 		return vP;
+	}
+
+	public Vector<Polynom> Round0(final Vector<Polynom> vP) {
+		final Vector<Polynom> vR = new Vector<> ();
+		for(final Polynom p : vP) {
+			vR.add(this.Round0(p));
+		}
+		
+		return vR;
+	}
+	public Polynom Round0(final Polynom p) {
+		return this.Round0(p, 1E-8);
+	}
+	public Polynom Round0(final Polynom p, final double dTol) {
+		// round to 0;
+		final Polynom pR = new Polynom(p.sRootName);
+		
+		for(final Map.Entry<Monom, Double> entry : p.entrySet()) {
+			if(Math.abs(entry.getValue()) < dTol) continue;
+			pR.Add(entry.getKey(), entry.getValue());
+		}
+		return pR;
 	}
 }

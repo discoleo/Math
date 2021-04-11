@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.Vector;
 
+import data.ComparatorPolyMSize;
 import data.Monom;
 import data.P2RootObj;
 import data.Pair;
@@ -524,6 +525,23 @@ public class PolyFactory extends BaseFactory {
 		
 		return vP;
 	}
+	public Vector<Polynom> ExpandSum(final String [] sVars, final int iPow1, final double [] dCoeff) {
+		// asymmetric Sum:
+		// d[1]*x + d[2]*y + d[3]*z, etc;
+		final Vector<Polynom> vP = new Vector<> ();
+		for(int i0=0; i0 < sVars.length; i0++) {
+			final Polynom p = new Polynom();
+			int npos = (i0 == 0) ? 0 : (dCoeff.length - i0);
+			for(int idV=0; idV < sVars.length; idV++) {
+				p.Add(new Monom(sVars[idV], iPow1), dCoeff[npos]);
+				npos ++;
+				if(npos >= dCoeff.length) npos = 0; 
+			}
+			vP.add(p);
+		}
+		
+		return vP;
+	}
 	public Vector<Polynom> DiffAndSum(final String [] sVars, final int iPow1) {
 		// 1 Sum + asymmetric Difference:
 		// x + y + z, - x + y + z, etc;
@@ -629,6 +647,25 @@ public class PolyFactory extends BaseFactory {
 		
 		return vP;
 	}
+	public Vector<Polynom> SumSeq(final Vector<Polynom> vP0, final double [] dCoeff) {
+		// sum( d * P[i] ), where dCoeff is applied sequentially on 1 Polynom;
+		final Vector<Polynom> vP = new Vector<> ();
+		
+		for(int idP=0; idP < vP0.size(); idP++) {
+			int npos = (idP == 0) ? 0 : (dCoeff.length - idP);
+			Polynom p = vP0.get(0);
+			p = math.Mult(p, dCoeff[npos], 1);
+			for(int id=1; id < vP0.size(); id++) {
+				npos ++;
+				if(npos >= dCoeff.length)npos = 0; 
+				final Polynom p2 = math.Mult(vP0.get(id), dCoeff[npos], 1);
+				p = math.Add(p, p2);
+			}
+			vP.add(p);
+		}
+		
+		return vP;
+	}
 	
 	// +++ R Helper +++
 	// export as Coeffs for R
@@ -720,7 +757,7 @@ public class PolyFactory extends BaseFactory {
 		return polyRational;
 	}
 	
-	public String ToCoeffs(Polynom p) {
+	public String ToCoeffs(final Polynom p) {
 		final Vector<String> vCoeffs = new Vector<>();
 		for(final Map.Entry<Integer, Polynom> entry : this.ToSeq(p, p.sRootName).entrySet()) {
 			while(entry.getKey() > vCoeffs.size()) {
@@ -737,5 +774,10 @@ public class PolyFactory extends BaseFactory {
 		sb.append(")");
 		final String sP = sb.toString();
 		return sP;
+	}
+	
+	public String ToPolyBySize(final Polynom p, final int nPow) {
+		final Polynom p2 = new Polynom(p, new ComparatorPolyMSize(nPow));
+		return p2.toString();
 	}
 }

@@ -66,6 +66,11 @@ public class Polynom extends TreeMap<Monom, Double> {
 			this.Add(new Monom(entry.getKey()), entry.getValue());
 		}
 	}
+	public Polynom(final Polynom p, final Comparator<Monom> cmp) {
+		super(cmp);
+		this.sRootName = p.sRootName;
+		this.putAll(p);
+	}
 	
 	// ++++++ Member Functions ++++++
 	

@@ -3,4 +3,4 @@ Math Tools &amp; Libraries
 
 - various tools/libraries useful to process mathematics:
 - - Polynom: operations with polynomials;
-- probably will be written in Java, but could be easily ported to C++;
+- has been written in Java, but could be easily ported to C++ (for proper support of Templates!);

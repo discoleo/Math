@@ -67,6 +67,7 @@ public class PolyFactory extends BaseFactory {
 	}
 	
 	public Polynom [] Cycle(final Polynom p, final String [] sVars) {
+		// cycle Vars in p
 		final Polynom [] pAll = new Polynom [sVars.length];
 		pAll[0] = p;
 		
@@ -235,6 +236,7 @@ public class PolyFactory extends BaseFactory {
 		System.out.println(str);
 	}
 
+	// solve for the Classic Polynomial
 	public Polynom ClassicPolynomial(final Polynom p1, final Polynom p2, final Polynom pDiv) {
 		return this.ClassicPolynomial(p1, p2, pDiv, "y");
 	}
@@ -358,6 +360,7 @@ public class PolyFactory extends BaseFactory {
 		return vP;
 	}
 	
+	// Simple Sum
 	public Polynom SimplePow(final String [] sVars, final int nOrder) {
 		// TODO: base-Variable
 		// x^n + y^n + z^n
@@ -496,8 +499,65 @@ public class PolyFactory extends BaseFactory {
 		}
 		return vP;
 	}
+
+	// Differences
+	public Vector<Polynom> Diff1(final String [] sVars, final int iPow1) {
+		// asymmetric Difference:
+		// - x + y + z, etc;
+		return this.Diff1(sVars, iPow1, 1);
+	}
+	public Vector<Polynom> Diff1(final String [] sVars, final int iPow1, final double dCoeff) {
+		// asymmetric Difference:
+		// - d*x + y + z, etc;
+		final Vector<Polynom> vP = new Vector<> ();
+		for(int i0=0; i0 < sVars.length; i0++) {
+			final Polynom p = new Polynom();
+			for(int idV=0; idV < sVars.length; idV++) {
+				if(idV == i0) {
+					p.Add(new Monom(sVars[idV], iPow1), -dCoeff);
+				} else {
+					p.Add(new Monom(sVars[idV], iPow1), 1);
+				}
+			}
+			vP.add(p);
+		}
+		
+		return vP;
+	}
+	public Vector<Polynom> DiffAndSum(final String [] sVars, final int iPow1) {
+		// 1 Sum + asymmetric Difference:
+		// x + y + z, - x + y + z, etc;
+		// same as AsymmetricAlternating();
+		final Vector<Polynom> vP = new Vector<> ();
+		// first: only Sum;
+		vP.add(this.SimplePow(sVars, iPow1));
+		
+		for(int i0=1; i0 < sVars.length; i0++) {
+			final Polynom p = new Polynom();
+			for(int idV=0; idV < sVars.length; idV++) {
+				if(idV == i0) {
+					p.Add(new Monom(sVars[idV], iPow1), -1);
+				} else {
+					p.Add(new Monom(sVars[idV], iPow1), 1);
+				}
+			}
+			vP.add(p);
+		}
+		
+		return vP;
+	}
+	public Vector<Polynom> AsymmetricAlternating(final String [] sVars, final int iPow1, final int iPow2) {
+		final Vector<Polynom> vP = new Vector<> ();
+		// first: only Sum
+		vP.add(this.CreateAlternating(sVars, -1, iPow1, iPow2));
+		for(int i=1; i < sVars.length; i++) {
+			vP.add(this.CreateAlternating(sVars, i, iPow1, iPow2));
+		}
+		return vP;
+	}
+	
 	public Vector<Polynom> AsymmetricDiff3(final String [] sVars, final int iPow1, final int iPow2) {
-		// asymmetric Difference
+		// [old] asymmetric Difference
 		final Vector<Polynom> vP = new Vector<> ();
 		for(int id=0; id < sVars.length - 2; id++) {
 			final Polynom p = new Polynom();
@@ -520,16 +580,6 @@ public class PolyFactory extends BaseFactory {
 		vP.add(p);
 		return vP;
 	}
-
-	public Vector<Polynom> AsymmetricAlternating(final String [] sVars, final int iPow1, final int iPow2) {
-		final Vector<Polynom> vP = new Vector<> ();
-		// first: only Sum
-		vP.add(this.CreateAlternating(sVars, -1, iPow1, iPow2));
-		for(int i=1; i < sVars.length; i++) {
-			vP.add(this.CreateAlternating(sVars, i, iPow1, iPow2));
-		}
-		return vP;
-	}
 	
 	public Polynom AsymmetricE2(final String [] sVars, final int iPow1, final int iPow2) {
 		// TODO: base-Variable
@@ -546,6 +596,42 @@ public class PolyFactory extends BaseFactory {
 		return p;
 	}
 	
+	// +++ Operations +++
+	
+	public Vector<Polynom> SumSeq(final Vector<Polynom> vP0) {
+		// add P1 + P2;
+		final Vector<Polynom> vP = new Vector<> ();
+		
+		for(int id=0; id < vP0.size() - 1; id++) {
+			final Polynom p = math.Add(vP0.get(id), vP0.get(id+1));
+			vP.add(p);
+		}
+		if(vP0.size() > 1) {
+			final Polynom p = math.Add(vP0.get(0), vP0.lastElement());
+			vP.add(p);
+		}
+		
+		return vP;
+	}
+	public Vector<Polynom> SumSeq(final Vector<Polynom> vP0, final double dCoeff) {
+		// sum( P[i] ), where dCoeff is applied sequentially on 1 Polynom;
+		final Vector<Polynom> vP = new Vector<> ();
+		
+		for(int idP=0; idP < vP0.size(); idP++) {
+			Polynom p = vP0.get(0);
+			if(idP == 0) p = math.Mult(p, dCoeff, 1);
+			for(int id=1; id < vP0.size(); id++) {
+				final Polynom p2 = (id == idP) ? math.Mult(vP0.get(id), dCoeff, 1) : vP0.get(id);
+				p = math.Add(p, p2);
+			}
+			vP.add(p);
+		}
+		
+		return vP;
+	}
+	
+	// +++ R Helper +++
+	// export as Coeffs for R
 	public String Coeffs(final Polynom p, int countVars) {
 		final Vector<Double> vCoeffs = new Vector<> ();
 		final TreeMap<String, Integer> dictVars = new TreeMap<> ();

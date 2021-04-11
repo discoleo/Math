@@ -1702,4 +1702,10 @@ public class MathTools {
 		
 		return pR;
 	}
+	public Vector<Polynom> MultInPlace(final Vector<Polynom> vP, int iMult) {
+		for(int id=0; id < vP.size(); id++) {
+			vP.set(id, this.Mult(vP.get(id), iMult));
+		}
+		return vP;
+	}
 }

@@ -1,5 +1,6 @@
 # Math
 Math Tools &amp; Libraries
+> **Warning:** Not maintained anymore!
 
 - various tools/libraries useful to process mathematics:
 - - Polynom: operations with polynomials;
